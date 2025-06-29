@@ -13,17 +13,26 @@ export default function HomePage() {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-green-500/10" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <section className="relative py-20 sm:py-32 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img 
+            src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1920&h=1080&fit=crop&crop=center&auto=format&q=80" 
+            alt="Beautiful Bali landscape with rice terraces and tropical scenery"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-green-500/20" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
+            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6 text-white">
               Professional B2B Travel Platform
-              <span className="block bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
                 for Malayali Agents
               </span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
+            <p className="text-xl text-white/90 max-w-3xl mx-auto mb-10">
               The Ultimate B2B Platform for Bali Travel. Go from quote to paid booking in minutes, not days.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

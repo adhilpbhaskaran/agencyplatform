@@ -1,32 +1,124 @@
 'use client'
 
-import { MapPin, Users, Calendar, Award, Heart, Camera, Utensils, Waves } from 'lucide-react'
+import { MapPin, Users, Calendar, Award, Heart, Camera, Utensils, Waves, Mountain, Palmtree, Sun } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function AboutBaliPage() {
-  const highlights = [
+  const galleryCategories = [
     {
-      icon: <Waves className="h-6 w-6" />,
-      title: "Pristine Beaches",
-      description: "From the black volcanic sands of Lovina to the white beaches of Nusa Dua"
+      id: 'beaches',
+      title: 'Pristine Beaches',
+      description: 'Discover Bali\'s stunning coastline from volcanic black sands to pristine white beaches',
+      icon: <Waves className="h-8 w-8" />,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Seminyak Beach sunset with golden sky',
+          caption: 'Seminyak Beach - Perfect for sunset viewing'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Nusa Dua white sand beach with clear blue water',
+          caption: 'Nusa Dua - Crystal clear waters and white sand'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Uluwatu cliff beach with dramatic rock formations',
+          caption: 'Uluwatu - Dramatic cliffs and hidden beaches'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Canggu black sand beach with surfers',
+          caption: 'Canggu - Black volcanic sand and world-class surf'
+        }
+      ]
     },
     {
-      icon: <Camera className="h-6 w-6" />,
-      title: "Cultural Heritage",
-      description: "Ancient temples, traditional ceremonies, and vibrant arts scene"
+      id: 'culture',
+      title: 'Rich Cultural Heritage',
+      description: 'Experience ancient temples, traditional ceremonies, and vibrant Balinese arts',
+      icon: <Camera className="h-8 w-8" />,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Traditional Balinese temple with intricate stone carvings',
+          caption: 'Tanah Lot Temple - Iconic sea temple'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Traditional Balinese dance performance with colorful costumes',
+          caption: 'Kecak Fire Dance - Traditional cultural performance'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Balinese Hindu ceremony with offerings and incense',
+          caption: 'Hindu Ceremonies - Daily spiritual rituals'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Traditional Balinese art market with handcrafted items',
+          caption: 'Ubud Art Market - Traditional crafts and artwork'
+        }
+      ]
     },
     {
-      icon: <Utensils className="h-6 w-6" />,
-      title: "Culinary Delights",
-      description: "From street food to world-class restaurants, a food lover's paradise"
+      id: 'nature',
+      title: 'Breathtaking Nature',
+      description: 'From emerald rice terraces to volcanic peaks and tropical rainforests',
+      icon: <Mountain className="h-8 w-8" />,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Jatiluwih rice terraces with morning mist',
+          caption: 'Jatiluwih Rice Terraces - UNESCO World Heritage'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Mount Batur sunrise trek with volcanic landscape',
+          caption: 'Mount Batur - Sunrise trekking adventure'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Sekumpul waterfall cascading through tropical forest',
+          caption: 'Sekumpul Waterfall - Hidden jungle paradise'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Monkey Forest Sanctuary with ancient trees',
+          caption: 'Sacred Monkey Forest - Ancient spiritual sanctuary'
+        }
+      ]
     },
     {
-      icon: <Heart className="h-6 w-6" />,
-      title: "Wellness Retreats",
-      description: "Yoga, meditation, spa treatments, and holistic healing experiences"
+      id: 'cuisine',
+      title: 'Culinary Paradise',
+      description: 'Savor authentic Balinese flavors from street food to fine dining experiences',
+      icon: <Utensils className="h-8 w-8" />,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Traditional Balinese nasi goreng with fresh ingredients',
+          caption: 'Nasi Goreng - Authentic Indonesian fried rice'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Balinese satay grilling over coconut charcoal',
+          caption: 'Satay Lilit - Traditional Balinese grilled meat'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Fresh tropical fruits at local market',
+          caption: 'Tropical Fruits - Fresh local produce'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+          alt: 'Fine dining restaurant with rice field views',
+          caption: 'Fine Dining - World-class restaurants with views'
+        }
+      ]
     }
   ]
 
@@ -85,20 +177,25 @@ export default function AboutBaliPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative h-[70vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/40 z-10" />
+      <div className="relative h-[80vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          <div className="w-full h-full bg-gradient-to-br from-green-900 via-blue-900 to-purple-900" />
+          <img 
+            src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1920&h=1080&fit=crop&crop=center&auto=format&q=80" 
+            alt="Stunning Bali landscape with rice terraces and tropical beauty"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 via-transparent to-blue-500/20" />
         </div>
         
         <div className="relative z-20 text-center text-white max-w-4xl mx-auto px-4">
-          <h1 className="text-5xl sm:text-6xl font-bold mb-6">
+          <h1 className="text-5xl sm:text-7xl font-bold mb-6">
             Discover the Magic of
             <span className="block bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
               Bali
             </span>
           </h1>
-          <p className="text-xl sm:text-2xl mb-8 text-gray-200">
+          <p className="text-xl sm:text-2xl mb-8 text-white/90">
             The Island of Gods awaits with its perfect blend of culture, nature, and spirituality
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -143,29 +240,49 @@ export default function AboutBaliPage() {
         </div>
       </section>
 
-      {/* What Makes Bali Special */}
+      {/* Gallery Categories */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">What Makes Bali Special?</h2>
+            <h2 className="text-4xl font-bold mb-4">Discover the Beauty of Bali</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Bali is more than just a destination—it's a transformative experience that touches the soul.
+              Immerse yourself in the stunning landscapes, rich culture, and unforgettable experiences that make Bali truly magical.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {highlights.map((highlight, index) => (
-              <Card key={index} className="text-center">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-4 text-white">
-                    {highlight.icon}
+          <div className="space-y-20">
+            {galleryCategories.map((category, categoryIndex) => (
+              <div key={categoryIndex} className="">
+                <div className="text-center mb-12">
+                  <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-6 text-white">
+                    {category.icon}
                   </div>
-                  <CardTitle>{highlight.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{highlight.description}</p>
-                </CardContent>
-              </Card>
+                  <h3 className="text-3xl font-bold mb-4">{category.title}</h3>
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    {category.description}
+                  </p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {category.images.map((image, imageIndex) => (
+                    <Card key={imageIndex} className="overflow-hidden group hover:shadow-xl transition-all duration-300">
+                      <div className="relative h-64 overflow-hidden">
+                        <img
+                          src={image.url}
+                          alt={image.alt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300" />
+                      </div>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground text-center">
+                          {image.caption}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

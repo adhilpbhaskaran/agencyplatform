@@ -23,6 +23,35 @@ export interface Database {
           created_at: string
           updated_at: string
         }
+      asset_gallery: {
+        Row: {
+          id: string
+          asset_url: string
+          alt_text: string | null
+          entity_type: string
+          related_entity_id: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          asset_url: string
+          alt_text?: string | null
+          entity_type: string
+          related_entity_id: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          asset_url?: string
+          alt_text?: string | null
+          entity_type?: string
+          related_entity_id?: string
+          display_order?: number
+          created_at?: string
+        }
+      }
         Insert: {
           id?: string
           clerk_id: string
@@ -459,6 +488,35 @@ export interface Database {
           message?: string
           read?: boolean
           metadata?: Json | null
+          created_at?: string
+        }
+      }
+      asset_gallery: {
+        Row: {
+          id: string
+          asset_url: string
+          alt_text: string | null
+          entity_type: string
+          related_entity_id: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          asset_url: string
+          alt_text?: string | null
+          entity_type: string
+          related_entity_id: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          asset_url?: string
+          alt_text?: string | null
+          entity_type?: string
+          related_entity_id?: string
+          display_order?: number
           created_at?: string
         }
       }

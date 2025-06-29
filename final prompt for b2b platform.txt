@@ -1,0 +1,1324 @@
+
+
+Module 1 of 12 Project Vision & Core Features
+
+## 1. CONTEXT
+
+We are building a B2B travel platform for the brand **Bali Malayali**. This platform must be a clean, powerful, AI-first, and smooth-to-use system that feels like the **Apple of B2B travel tech**.
+
+> The platform will be developed using **Trae.ai with Claude 4 Sonet** locally, then pushed to a production server after full debugging.
+> Think like a full-stack engineer, data architect, UI/UX designer, CA, cybersecurity expert, travel consultant, and cost-effective perfectionist.
+
+> **Tech Stack:** Trae.ai with Claude 4 Sonet (Local Dev), Supabase (Postgres, Storage, Auth), Clerk.dev (User Management), Puppeteer (PDF Gen), React/Next.js (Frontend).
+
+## 2. CORE FEATURES
+
+- Fully responsive B2B portal with Clerk.dev authentication.
+- Agent dashboard (quotes, bookings, earnings, activity feed).
+- Comprehensive admin panel to manage all dynamic content and pricing.
+- Smart quote generator (up to 3 hotel options).
+- Real-time pricing engine with seasonal rates.
+- White-labeled PDF quote generation.
+- Integrated multi-currency payments with Indian tax support (GST/TCS).
+- Multi-tiered affiliate system with automated commission tracking.
+- AI Copilot in the admin panel for business intelligence.
+- Agent leaderboard to drive performance.
+
+## 3. QUOTE PDF GENERATION MODULE
+
+- **Engine:** Puppeteer for server-side PDF generation from HTML/CSS.
+- **Styling:** Use TailwindCSS-based templates for clean, modern design.
+- **Data:** Populate with data from Supabase (`quotes`, `agents`, `clients` tables). Agent logo from Supabase Storage.
+- **Preview:** A live, web-based preview rendered using a library like `react-pdf-viewer`.
+- **Functionality:**
+    1.  Generate a white-labeled PDF including client details, day-wise itinerary, hotel options in a table format, detailed cost breakdown (land, hotel, fees, markup), and agent's own branding.
+    2.  An option for the agent to show or hide their markup from the client-facing quote.
+    3.  A toggle for the agent to show/hide the "Powered by Bali Malayali" watermark.
+    4.  Allow agents to download, email (via configured SMTP), or share the quote via WhatsApp Web.
+    5.  All generated quotes are saved in the agent's dashboard with version history.
+    6.  The generated PDF file is stored in a Supabase Storage bucket (`/quotes-pdf`) and the URL is saved in `quotes.pdf_url`.
+
+Module 2 of 12: Core Database Schema (SQL)
+
+This module contains the primary tables essential for the application's core functionality.
+
+-- 1. Custom Type Definitions (ENUMs)
+CREATE TYPE user_type AS ENUM ('travel_agent', 'freelancer', 'affiliate');
+CREATE TYPE agent_tier AS ENUM ('bronze', 'silver', 'gold');
+CREATE TYPE quote_status AS ENUM ('draft', 'final', 'paid', 'expired', 'void');
+CREATE TYPE trip_status AS ENUM ('pending', 'completed', 'cancelled');
+CREATE TYPE pricing_season AS ENUM ('low', 'high', 'peak');
+CREATE TYPE travel_region AS ENUM ('mainland', 'nusa_penida');
+
+-- 2. Core Table Definitions
+
+-- STORES GLOBAL CONFIGURATION AND SETTINGS FOR THE PLATFORM
+CREATE TABLE settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL UNIQUE, -- e.g., 'admin_fee_idr', 'fx_buffer_percentage', 'gst_rate'
+  value TEXT NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES ALL USERS: AGENTS, FREELANCERS, AND AFFILIATES
+CREATE TABLE agents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_id TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  tier agent_tier NOT NULL DEFAULT 'bronze',
+  type user_type NOT NULL DEFAULT 'travel_agent',
+  logo_url TEXT,
+  referred_by_agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES END-CLIENTS OF THE AGENTS
+CREATE TABLE clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  name TEXT,
+  email TEXT,
+  phone TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES HOTEL VENDOR INFORMATION
+CREATE TABLE hotels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  city TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES INDIVIDUAL ROOM TYPES FOR EACH HOTEL
+CREATE TABLE hotel_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hotel_id UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  max_capacity INT NOT NULL DEFAULT 2,
+  allow_triple BOOLEAN NOT NULL DEFAULT false,
+  allow_child BOOLEAN NOT NULL DEFAULT true,
+  base_price_idr NUMERIC NOT NULL CHECK (base_price_idr >= 0),
+  extra_adult_price_idr NUMERIC CHECK (extra_adult_price_idr >= 0),
+  child_price_idr NUMERIC CHECK (child_price_idr >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES DYNAMIC, SEASON-BASED PRICING FOR ROOMS
+CREATE TABLE seasonal_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hotel_room_id UUID NOT NULL REFERENCES hotel_rooms(id) ON DELETE CASCADE,
+  season pricing_season NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  rate_idr NUMERIC NOT NULL CHECK (rate_idr >= 0),
+  CONSTRAINT unique_season_per_room_per_period UNIQUE (hotel_room_id, start_date, end_date)
+);
+
+-- STORES AVAILABLE ACTIVITIES
+CREATE TABLE activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  location TEXT,
+  price_idr NUMERIC NOT NULL CHECK (price_idr >= 0)
+);
+
+-- STORES ENTRY FEES FOR ATTRACTIONS
+CREATE TABLE entry_fees (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location TEXT NOT NULL UNIQUE,
+  price_idr NUMERIC NOT NULL CHECK (price_idr >= 0)
+);
+
+-- STORES TRANSPORTATION RATES BASED ON PAX COUNT AND REGION
+CREATE TABLE transport_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  region travel_region NOT NULL,
+  pax_limit INT NOT NULL,
+  vehicle_type TEXT NOT NULL,
+  rate_per_day_idr NUMERIC NOT NULL CHECK (rate_per_day_idr >= 0),
+  UNIQUE(region, pax_limit)
+);
+
+-- THE CORE TABLE FOR QUOTES
+CREATE TABLE quotes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+  pax INT NOT NULL CHECK (pax > 0),
+  children INT DEFAULT 0,
+  travel_start DATE NOT NULL,
+  travel_end DATE NOT NULL,
+  base_cost_idr NUMERIC,
+  markup_idr NUMERIC DEFAULT 0,
+  final_total_idr NUMERIC,
+  quote_ref TEXT UNIQUE,
+  status quote_status NOT NULL DEFAULT 'draft',
+  trip_status trip_status NOT NULL DEFAULT 'pending',
+  pdf_url TEXT,
+  expires_at TIMESTAMPTZ,
+  display_currency TEXT NOT NULL DEFAULT 'USD',
+  exchange_rate_used NUMERIC,
+  display_final_total NUMERIC,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES UP TO 3 HOTEL COMBINATIONS PER QUOTE
+CREATE TABLE quote_options (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  option_number INT NOT NULL CHECK (option_number IN (1, 2, 3)),
+  hotel_room_ids UUID[],
+  room_cost_idr NUMERIC,
+  land_cost_idr NUMERIC,
+  total_cost_idr NUMERIC,
+  UNIQUE(quote_id, option_number)
+);
+
+-- STORES THE DAY-BY-DAY ITINERARY FOR A QUOTE
+CREATE TABLE quote_days (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  day_number INT NOT NULL,
+  day_date DATE NOT NULL,
+  region travel_region NOT NULL,
+  notes TEXT,
+  activities JSONB,
+  entry_fee_ids UUID[],
+  UNIQUE(quote_id, day_number)
+);
+
+-- STORES PAYMENT TRANSACTIONS
+CREATE TABLE payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE RESTRICT,
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE RESTRICT,
+  amount_paid NUMERIC NOT NULL,
+  currency_paid TEXT NOT NULL,
+  amount_idr NUMERIC,
+  payment_gateway TEXT,
+  gateway_transaction_id TEXT,
+  status TEXT,
+  fx_rate_used NUMERIC,
+  tax_details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES AFFILIATE COMMISSION RECORDS
+CREATE TABLE commissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  originating_agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'INR',
+  status TEXT CHECK (status IN ('pending', 'approved', 'paid', 'void')) DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+Module 3 of 12: Operational & Analytics Schema (SQL)
+
+This module contains tables for operations, analytics, and performance, including views and indexes.
+
+-- STORES HOURLY EXCHANGE RATES
+CREATE TABLE exchange_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  base_currency TEXT NOT NULL DEFAULT 'IDR',
+  target_currency TEXT NOT NULL,
+  rate NUMERIC NOT NULL,
+  source TEXT,
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT unique_currency_pair UNIQUE (base_currency, target_currency)
+);
+
+-- TRACKS QUOTE STATUS CHANGES
+CREATE TABLE quote_status_history (
+  id BIGSERIAL PRIMARY KEY,
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  status_from quote_status,
+  status_to quote_status NOT NULL,
+  changed_by_user_id UUID REFERENCES agents(id),
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES AGENT SUPPORT TICKETS
+CREATE TABLE support_tickets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID NOT NULL REFERENCES agents(id),
+  quote_id UUID REFERENCES quotes(id),
+  subject TEXT NOT NULL,
+  description TEXT,
+  status TEXT CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')) DEFAULT 'open',
+  priority TEXT CHECK (priority IN ('low', 'medium', 'high', 'urgent')) DEFAULT 'medium',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- TRACKS VENDOR INVENTORY
+CREATE TABLE inventory_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_type TEXT NOT NULL,
+  vendor_id UUID NOT NULL,
+  snapshot_date DATE NOT NULL,
+  available_units INT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STORES AUDIT LOGS
+CREATE TABLE logs (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID REFERENCES agents(id),
+  action TEXT NOT NULL,
+  object_type TEXT,
+  object_id UUID,
+  changes JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Leaderboard (Materialized View)
+CREATE MATERIALIZED VIEW agent_leaderboard AS
+SELECT
+  q.agent_id,
+  a.name as agent_name,
+  a.tier as agent_tier,
+  COUNT(q.id) AS total_bookings,
+  SUM(q.final_total_idr) AS total_revenue_idr,
+  AVG(q.markup_idr) AS avg_markup_idr
+FROM quotes q
+JOIN agents a ON q.agent_id = a.id
+WHERE q.status = 'paid' AND q.trip_status = 'completed'
+GROUP BY q.agent_id, a.name, a.tier;
+
+-- Indexes for Performance
+CREATE INDEX idx_quotes_agent_status ON quotes(agent_id, status);
+CREATE INDEX idx_seasonal_rate_dates ON seasonal_rates(hotel_room_id, start_date, end_date);
+CREATE INDEX idx_commissions_referrer_status ON commissions(referrer_id, status);
+CREATE INDEX idx_tickets_agent_status ON support_tickets(agent_id, status);
+
+Module 4 of 12: Core Database Functions (PL/pgSQL)
+
+This module contains the complete, executable SQL functions for the backend logic.
+
+-- Core Pricing Engine: calculate_quote_cost
+CREATE OR REPLACE FUNCTION public.calculate_quote_cost(p_quote_id UUID)
+RETURNS void AS $$
+DECLARE
+  q RECORD;
+  d RECORD;
+  activity_item JSONB;
+  entry_fee_id UUID;
+  quote_option RECORD;
+  room_config_id UUID;
+  v_pax INT;
+  v_nights INT;
+  v_admin_fee_idr NUMERIC := 0;
+  v_transport_cost_idr NUMERIC := 0;
+  v_activity_cost_idr NUMERIC := 0;
+  v_entry_fee_cost_idr NUMERIC := 0;
+  v_room_cost_idr NUMERIC := 0;
+  v_land_cost_idr NUMERIC := 0;
+  v_daily_transport_rate NUMERIC;
+  v_activity_price NUMERIC;
+  v_entry_fee_price NUMERIC;
+  v_room_rate_idr NUMERIC;
+  v_current_day DATE;
+BEGIN
+  -- Step 1: Fetch core quote details
+  SELECT * INTO q FROM public.quotes WHERE id = p_quote_id;
+  v_pax := q.pax;
+  v_nights := (q.travel_end - q.travel_start);
+
+  -- Step 2: Get admin fee from settings, with a fallback to 0
+  SELECT value::NUMERIC INTO v_admin_fee_idr FROM public.settings WHERE key = 'admin_fee_idr';
+  v_admin_fee_idr := COALESCE(v_admin_fee_idr, 0);
+
+  -- Step 3: Calculate Land Costs (Transport, Activities, Entry Fees)
+  FOR d IN SELECT * FROM public.quote_days WHERE quote_id = p_quote_id LOOP
+    -- Transport Cost
+    IF d.region = 'nusa_penida' THEN
+      SELECT rate_per_day_idr INTO v_daily_transport_rate FROM public.transport_rates
+      WHERE region = 'nusa_penida' AND pax_limit >= v_pax ORDER BY pax_limit ASC LIMIT 1;
+      v_transport_cost_idr := v_transport_cost_idr + (CEIL(v_pax / 6.0) * COALESCE(v_daily_transport_rate, 0));
+    ELSE
+      SELECT rate_per_day_idr INTO v_daily_transport_rate FROM public.transport_rates
+      WHERE region = 'mainland' AND v_pax <= pax_limit ORDER BY pax_limit ASC LIMIT 1;
+      v_transport_cost_idr := v_transport_cost_idr + COALESCE(v_daily_transport_rate, 0);
+    END IF;
+
+    -- Activity Cost
+    IF d.activities IS NOT NULL THEN
+      FOR activity_item IN SELECT jsonb_array_elements(d.activities) LOOP
+        SELECT price_idr INTO v_activity_price FROM public.activities WHERE id = (activity_item->>'activity_id')::UUID;
+        v_activity_cost_idr := v_activity_cost_idr + (COALESCE(v_activity_price, 0) * (activity_item->>'participants')::INT);
+      END LOOP;
+    END IF;
+
+    -- Entry Fee Cost
+    IF d.entry_fee_ids IS NOT NULL THEN
+      FOREACH entry_fee_id IN ARRAY d.entry_fee_ids LOOP
+        SELECT price_idr INTO v_entry_fee_price FROM public.entry_fees WHERE id = entry_fee_id;
+        v_entry_fee_cost_idr := v_entry_fee_cost_idr + (COALESCE(v_entry_fee_price, 0) * v_pax);
+      END LOOP;
+    END IF;
+  END LOOP;
+  
+  v_land_cost_idr := v_transport_cost_idr + v_activity_cost_idr + v_entry_fee_cost_idr + v_admin_fee_idr;
+
+  -- Step 4: Calculate room cost for each option
+  FOR quote_option IN SELECT * FROM public.quote_options WHERE quote_id = p_quote_id LOOP
+    v_room_cost_idr := 0;
+    IF array_length(quote_option.hotel_room_ids, 1) > 0 THEN
+      FOR i IN 0..v_nights-1 LOOP
+        v_current_day := q.travel_start + i;
+        FOREACH room_config_id IN ARRAY quote_option.hotel_room_ids LOOP
+          SELECT rate_idr INTO v_room_rate_idr FROM public.seasonal_rates
+          WHERE hotel_room_id = room_config_id AND v_current_day BETWEEN start_date AND end_date;
+          
+          IF v_room_rate_idr IS NULL THEN
+            SELECT base_price_idr INTO v_room_rate_idr FROM public.hotel_rooms WHERE id = room_config_id;
+          END IF;
+          
+          v_room_cost_idr := v_room_cost_idr + COALESCE(v_room_rate_idr, 0);
+        END LOOP;
+      END LOOP;
+    END IF;
+    
+    UPDATE public.quote_options SET
+      room_cost_idr = v_room_cost_idr,
+      land_cost_idr = v_land_cost_idr,
+      total_cost_idr = v_room_cost_idr + v_land_cost_idr
+    WHERE id = quote_option.id;
+  END LOOP;
+  
+  -- Step 5: Update main quote with totals from option 1
+  SELECT total_cost_idr INTO v_land_cost_idr FROM public.quote_options WHERE quote_id = p_quote_id AND option_number = 1;
+  
+  UPDATE public.quotes
+  SET
+    base_cost_idr = v_land_cost_idr,
+    final_total_idr = v_land_cost_idr + q.markup_idr
+  WHERE id = p_quote_id;
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- Currency Conversion Engine
+CREATE OR REPLACE FUNCTION public.update_quote_currency(p_quote_id UUID)
+RETURNS void AS $$
+DECLARE
+  q RECORD;
+  fx_rate NUMERIC;
+  fx_buffer NUMERIC;
+  v_adjusted_rate NUMERIC;
+BEGIN
+  SELECT * INTO q FROM public.quotes WHERE id = p_quote_id;
+  SELECT value::NUMERIC INTO fx_buffer FROM public.settings WHERE key = 'fx_buffer_percentage';
+  fx_buffer := 1 + (COALESCE(fx_buffer, 1.5) / 100);
+
+  SELECT rate INTO fx_rate FROM public.exchange_rates
+  WHERE base_currency = 'IDR' AND target_currency = q.display_currency
+  ORDER BY fetched_at DESC LIMIT 1;
+
+  IF fx_rate IS NULL THEN
+    RAISE WARNING 'No exchange rate found for currency %.', q.display_currency;
+    v_adjusted_rate = 1;
+  ELSE
+    v_adjusted_rate = fx_rate * fx_buffer;
+  END IF;
+
+  UPDATE public.quotes
+  SET
+    exchange_rate_used = v_adjusted_rate,
+    display_final_total = final_total_idr * v_adjusted_rate
+  WHERE id = p_quote_id;
+
+END;
+$$ LANGUAGE plpgsql;
+
+Module 5 of 12: Supabase Edge Function (TypeScript)
+
+This module contains the hardened Deno function for fetching exchange rates.
+
+// File: supabase/functions/fetch_exchange_rates/index.ts
+import { serve } from 'https://deno.land/std/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+
+serve(async (req) => {
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    const currencies = ['USD', 'INR', 'AED'];
+    for (const currency of currencies) {
+      const res = await fetch(`https://api.exchangerate.host/latest?base=IDR&symbols=${currency}`);
+      if (!res.ok) throw new Error(`Failed to fetch rate for ${currency}. Status: ${res.status}`);
+      
+      const data = await res.json();
+      const rate = data.rates[currency];
+      if (!rate) throw new Error(`Rate for ${currency} not found in response.`);
+      
+      const { error } = await supabase
+        .from('exchange_rates')
+        .upsert({
+          target_currency: currency,
+          base_currency: 'IDR',
+          rate: rate,
+          source: 'exchangerate.host',
+          fetched_at: new Date().toISOString()
+        }, { onConflict: 'base_currency, target_currency' });
+
+      if (error) throw error;
+    }
+
+    return new Response(JSON.stringify({ status: 'ok', message: 'Exchange rates updated.' }), { status: 200, headers: { 'Content-Type': 'application/json' }});
+  } catch (error) {
+    console.error('Error in fetch-exchange-rates function:', error);
+    return new Response(JSON.stringify({ status: 'error', message: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' }});
+  }
+});
+
+Module 6 of 12: API Contract, Frontend Directives & Final Polish
+
+This module provides the API specification and critical directives for building the frontend application.
+
+## 7. FULL API CONTRACT V2.0
+
+All endpoints require authentication and are subject to RLS policies. They must return the Standardized API Error Response Schema on failure.
+
+#### Endpoint: `POST /api/quotes`
+-   **Description:** Creates a new draft quote for the authenticated agent.
+-   **RBAC:** `travel_agent`, `freelancer`
+-   **Request Body:**
+    ```json
+    {
+      "client_name": "Ravi Kumar",
+      "pax": 2,
+      "children": 0,
+      "travel_start": "2025-09-15",
+      "travel_end": "2025-09-20",
+      "display_currency": "INR"
+    }
+    ```
+-   **Success Response (201 Created):**
+    ```json
+    {
+      "id": "a1b2c3d4-...",
+      "quote_ref": "BM-2509-1",
+      "status": "draft",
+      "created_at": "2025-06-28T18:00:00Z"
+    }
+    ```
+
+#### Endpoint: `PUT /api/quotes/:id`
+-   **Description:** Updates a quote with itinerary details. Triggers cost calculation on the backend.
+-   **RBAC:** `travel_agent`, `freelancer` (must be owner of the quote).
+-   **Request Body:**
+    ```json
+    {
+      "quote_options": [
+        { "option_number": 1, "hotel_room_ids": ["room_uuid_1", "room_uuid_2"] }
+      ],
+      "day_wise_plan": [
+        { "day_number": 1, "day_date": "2025-09-15", "region": "mainland", "notes": "Arrival", "activities": null, "entry_fee_ids": null },
+        { "day_number": 2, "day_date": "2025-09-16", "region": "mainland", "notes": "ATV Ride", "activities": [{ "activity_id": "atv_uuid", "participants": 2 }], "entry_fee_ids": null }
+      ]
+    }
+    ```
+-   **Success Response (200 OK):**
+    ```json
+    {
+      "id": "a1b2c3d4-...",
+      "status": "draft",
+      "base_cost_idr": 5400000,
+      "final_total_idr": 5400000,
+      "display_currency": "INR",
+      "exchange_rate_used": 185.5,
+      "display_final_total": 29110.51
+    }
+    ```
+
+## 13. FINAL ARCHITECTURAL DIRECTIVES & POLISH
+
+This final section provides explicit instructions on key implementation details.
+
+### Explicit Room Allocation Algorithm
+The `calculateRoomSplit` logic should follow this precise algorithm:
+1.  **Input:** `total_adults`, `total_children`.
+2.  **Child Eligibility:** Define age brackets. Children 0-5 are "infants" (free, share bed). Children 6-12 are "children" (chargeable).
+3.  **Calculate Chargeable Heads:** `chargeable_heads` = `total_adults` + (number of children aged 6-12).
+4.  **Default Allocation:** Number of double rooms = `floor(chargeable_heads / 2)`. Remaining heads = `chargeable_heads % 2`.
+5.  **Handle Remainder:** If remaining heads = 1, add one "Single Occupancy Room".
+6.  **Triple Sharing Override:** If `allow_triple` is true and makes sense for the group size, prefer one triple room over one double + one single.
+7.  **Output:** Return a JSON object detailing the exact room configuration, e.g., `{"double_rooms": 2, "single_rooms": 1, "children_extra_beds": 1}`.
+
+### Standardized API Error Response Schema
+All API endpoints that return an error (`4xx` or `5xx` status codes) **MUST** conform to this JSON structure:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNIQUE_CONSTRAINT_VIOLATION",
+    "message": "An agent with this email address already exists.",
+    "details": "The value provided for the 'email' field violates the unique constraint."
+  }
+}
+
+Frontend State Management Directive
+
+    Server State & Caching: Use React Query (or SWR). All data fetching from the API must be handled through it for caching and performance.
+
+    Global Client State: For shared, non-server state (e.g., UI state), use a minimal manager like Zustand or Jotai.
+
+Granular Admin Panel UI/UX Directive
+
+    Master-Detail Layout: For managing lists (Hotels, Activities, Agents), use a two-column view. Left column is a searchable list. Clicking an item loads its details in the right column for editing.
+
+    Modal Forms for New Items: Use centered modal dialogs for creating new items.
+
+    Danger Zones: Destructive actions must be protected by a confirmation modal requiring the user to type the item's name to confirm.
+
+---
+### **Module 7 of 12: Demo Data & Notifications**
+This module contains the runnable demo data script and the content for key notifications.
+
+```markdown
+## 9. NOTIFICATION CONTENT TEMPLATES
+
+#### Quote Finalized (Email to Agent)
+-   **Subject:** Your Bali Quote for {{client_name}} is ready to send!
+-   **Body:** Hi {{agent_name}},\n\nYour quote (Ref: {{quote_ref}}) for {{client_name}} has been finalized and a PDF has been generated. You can now send it to your client from your dashboard.\n\nThank you,\nThe Bali Malayali Team
+
+#### Payment Received (Email to Agent)
+-   **Subject:** ✅ Payment Confirmed! Booking for {{client_name}} ({{quote_ref}}) is a go!
+-   **Body:** Great news! A payment of {{currency_symbol}}{{amount_paid}} has been successfully processed for the trip for {{client_name}}. The booking is now confirmed. We will begin making the necessary arrangements.
+
+#### Affiliate Commission Earned (Email to Referrer)
+-   **Subject:** 💸 You've Earned a Commission!
+-   **Body:** Hi {{referrer_name}},\n\nCongratulations! You just earned ₹{{commission_amount}} from your referred agent, {{originating_agent_name}}, who completed a booking. Check your commission wallet in the dashboard.
+
+---
+
+## 10. COMPLETE, RUNNABLE DEMO DATA SCRIPT
+
+```sql
+BEGIN;
+
+-- Insert default settings
+INSERT INTO settings (key, value, description) 
+VALUES 
+  ('admin_fee_idr', '50000', 'Default admin service fee in IDR added to every quote.'),
+  ('fx_buffer_percentage', '1.5', 'Buffer percentage to add to live exchange rates.');
+
+-- Create a primary agent
+WITH agent1 AS (
+  INSERT INTO agents (clerk_id, name, email, tier, type)
+  VALUES ('clerk_user_suresh', 'Suresh Travels', 'suresh@travels.com', 'gold', 'travel_agent')
+  RETURNING id
+),
+-- Create a second agent referred by the first
+agent2 AS (
+  INSERT INTO agents (clerk_id, name, email, tier, type, referred_by_agent_id)
+  VALUES ('clerk_user_priya', 'Priya (Freelancer)', 'priya@freelance.com', 'bronze', 'freelancer', (SELECT id FROM agent1))
+  RETURNING id
+),
+-- Create hotels
+hotel1 AS (
+  INSERT INTO hotels (name, city) VALUES ('The Akmani Legian', 'Kuta') RETURNING id
+),
+hotel2 AS (
+  INSERT INTO hotels (name, city) VALUES ('Bubu Jungle Resort', 'Ubud') RETURNING id
+),
+-- Create rooms for the hotels
+room1 AS (
+  INSERT INTO hotel_rooms (hotel_id, name, base_price_idr)
+  SELECT id, 'Deluxe Room', 800000 FROM hotel1 RETURNING id
+),
+room2 AS (
+  INSERT INTO hotel_rooms (hotel_id, name, base_price_idr)
+  SELECT id, 'Jungle Cottage', 1200000 FROM hotel2 RETURNING id
+),
+-- Create an activity
+activity1 AS (
+  INSERT INTO activities (name, location, price_idr) VALUES ('ATV Quad Biking', 'Ubud', 350000) RETURNING id
+),
+-- Create a quote by the referred agent (Priya)
+quote1 AS (
+  INSERT INTO quotes (agent_id, pax, travel_start, travel_end, quote_ref, display_currency)
+  SELECT id, 2, '2025-08-10', '2025-08-15', 'PF-2508-1', 'INR' FROM agent2 RETURNING id
+),
+-- Create the day-wise itinerary for the quote
+day1 AS (
+    INSERT INTO quote_days(quote_id, day_number, day_date, region, notes)
+    SELECT id, 1, '2025-08-10', 'mainland', 'Arrival in Bali, transfer to Kuta.' FROM quote1
+),
+day2 AS (
+    INSERT INTO quote_days(quote_id, day_number, day_date, region, notes, activities)
+    SELECT id, 2, '2025-08-11', 'mainland', 'ATV ride for both travelers.', jsonb_build_array(jsonb_build_object('activity_id', (SELECT id from activity1), 'participants', 2)) FROM quote1
+)
+-- Finally, create a commission record for the referrer (Suresh) based on this quote
+INSERT INTO commissions (referrer_id, originating_agent_id, quote_id, type, amount, currency)
+SELECT (SELECT id FROM agent1), (SELECT id FROM agent2), (SELECT id FROM quote1), 'recurring_flat', 100, 'INR';
+
+COMMIT;
+
+
+---
+### **Module 8 of 12: Security, Setup & Debugging**
+This final module provides the operational checklists and strategies for security and maintenance.
+
+```markdown
+## 8. SECURITY & COMPLIANCE DEEP DIVE
+
+* **Row Level Security (RLS):** Enable RLS on all tables.
+    * **Policy on `quotes`:** An agent can only access their own quotes.
+        ```sql
+        CREATE POLICY "Agents can access their own quotes" ON quotes
+        FOR ALL USING ( (SELECT clerk_id FROM agents WHERE id = agent_id) = auth.jwt()->>'sub' );
+        ```
+    * **Policy on `agents` (Profile):** An agent can only view and update their own profile.
+        ```sql
+        CREATE POLICY "Agents can view and update their own profile" ON agents
+        FOR ALL USING ( clerk_id = auth.jwt()->>'sub' );
+        ```
+* **API Input Validation:** Use `zod` in the application layer to validate all incoming data against strict schemas.
+* **Environment Variables:** Use Supabase Vault (`supabase secrets`) for all keys and secrets.
+* **Function Security:** Database functions should be `SECURITY INVOKER` where possible. Use `SECURITY DEFINER` only when necessary and with extreme caution, setting `search_path` to prevent hijacking.
+
+---
+
+## 11. PRE-FLIGHT & INTEGRATION CHECKLIST
+
+| Service / Dependency | Local Development Setup | Staging / Preview Setup | Production Setup |
+| :--- | :--- | :--- | :--- |
+| **1. Supabase Backend** | Run `supabase start` in your terminal. | Create a dedicated "Staging" project. | Create a dedicated "Production" project. |
+| **2. Authentication** | Clerk.dev **Development** instance. Use "Test" keys. | Use the same **Development** instance. | Clerk.dev **Production** instance. Use "Live" keys. |
+| **3. Payment Gateways**| Get **"Test Mode" / "Sandbox" API keys**. | Use the same **"Test Mode"** API keys. | Switch to **"Live Mode" API keys**. |
+| **4. Email Service (SMTP)**| Use **MailHog** or **Resend Sandbox**. | Use provider with **test keys** to approved emails. | Use provider with **production keys**. |
+| **5. Currency Exchange API**| Direct calls to free API. Can be mocked. | Direct calls to the API. | Direct calls. Consider a paid plan for reliability. |
+| **6. AI Copilot (Claude)** | Developer API key with low usage limits. | Same developer API key. | Main production API key. |
+| **7. Environment Variables** | `.env.local` file for all **local/test** keys. | Hosting provider vars for **staging/test** keys. | Hosting provider vars for **production/live** keys. |
+
+---
+
+## 12. PLATFORM DEBUGGING & VERIFICATION STRATEGY
+
+### Layer 1: Database Debugging
+1.  **Direct SQL Queries:** Use the Supabase SQL Editor to inspect data directly.
+2.  **Function Tracing:** Use `RAISE NOTICE` in PL/pgSQL functions to trace execution.
+3.  **Performance Debugging:** Use `EXPLAIN ANALYZE` to check query performance.
+
+### Layer 2: Backend Logic Debugging
+1.  **Local Development:** Use `supabase start` and `supabase functions serve` for hot-reloading and `console.log`.
+2.  **Deployed Function Logs:** Check the Supabase Dashboard for logs of deployed functions.
+
+### Layer 3: API & Network Debugging
+1.  **Browser DevTools (Network Tab):** Inspect `Headers`, `Payload`, `Response`, and `Status Code` of all API requests.
+2.  **API Tools (Postman/Insomnia):** Isolate backend issues by making direct API calls.
+
+### Layer 4: Frontend Debugging
+1.  **Browser DevTools (Console & Components):** Use `console.log` for tracing and React DevTools to inspect components.
+2.  **UI/CSS Debugging:** Use the "Elements" tab to inspect the DOM and live-edit CSS.
+
+### Layer 5: End-to-End (E2E) & Integration Debugging
+1.  **Trace Data Flow:** Follow a single piece of data through the entire stack.
+2.  **Automated E2E Testing:** Use Playwright or Cypress to automate full user journeys.
+
+Module 9 of 12: Production Hardening & Experience Polish
+
+Objective: This final module operationalizes the vision. It adds the necessary layers for enterprise-grade resilience, a complete user lifecycle experience, and a robust governance framework. This module ensures the platform is not just functional, but also scalable, maintainable, and legally compliant.
+
+13. B2B Public Presence & Onboarding
+
+    Action: Create a set of static pre-login pages on the b2b.balimalayali.com subdomain using Next.js Static Site Generation (SSG) for performance.
+
+    Content Source: All content for these pages (text, images) should be managed via a headless CMS (e.g., a marketing_content table in Supabase) to allow for easy updates by non-developers.
+
+    Pages to Create:
+
+        Home: Hero section with a clear value proposition ("The Ultimate B2B Platform for Bali Travel"), key features (Smart Quotes, Real-time Pricing, Affiliate System), and social proof (testimonials).
+
+        Why Us: Detailed breakdown of competitive advantages. Contrast the platform's smoothness and power with traditional email/spreadsheet methods. Use UI screenshots.
+
+        Partner With Us: A clear call-to-action page with an embedded form for new agent applications. The form submission should trigger an admin notification for vetting.
+
+        About Bali: A visually rich page showcasing the beauty and diversity of Bali to inspire agents.
+
+        Login: A simple page containing the Clerk.dev sign-in component.
+
+    Empty State Dashboard UI/UX:
+
+        Directive: When a newly signed-in agent has zero quotes, the dashboard must not be blank.
+
+        Implementation: Design a welcome component that includes:
+
+            A personalized greeting: <h2>Welcome, {{agent_name}}! Let's create your first Bali masterpiece.</h2>
+
+            A visual guide (e.g., subtle arrows or highlights) pointing to the "Create New Quote" button.
+
+            A single, prominent Call-to-Action (CTA) button: [+ Create Your First Quote]
+
+            A small checklist component for setup: [ ] Upload Your Agency Logo, [ ] Review Commission Structure.
+
+14. Change Management & Evolution Strategy
+
+    Database Migrations:
+
+        Workflow: All schema changes MUST be managed through Supabase's migration system.
+
+        Process:
+
+            For local development, generate changes using supabase db diff -f <migration_name>.
+
+            Review the generated SQL file for correctness.
+
+            Commit the new migration file to the /supabase/migrations directory in the Git repository.
+
+        Policy: No manual schema changes are to be made on the staging or production databases via the Supabase Studio. All changes must go through the migration workflow.
+
+    API Versioning:
+
+        Strategy: Implement URL-based versioning for the API for any breaking changes. For example, if the PUT /api/quotes/:id request body changes fundamentally, it should be introduced as PUT /api/v2/quotes/:id.
+
+        Policy: Versioning is reserved for breaking changes only. Additive changes (e.g., adding a new optional field to a response) do not require a new version.
+
+15. Core Product Flow Enhancements
+
+    Upgraded Quote Status Flow:
+
+        Action: Update the quote_status ENUM type.
+
+        SQL:
+
+-- Note: Dropping and re-creating an ENUM is complex with existing data.
+-- This requires a temporary type conversion during a maintenance window.
+ALTER TYPE quote_status ADD VALUE 'sent';
+ALTER TYPE quote_status ADD VALUE 'revised';
+ALTER TYPE quote_status ADD VALUE 'approved'; -- Client has approved, pending payment
+
+Quote Versioning System:
+
+    Action: Create a new table to track quote revisions to provide a full history.
+
+    SQL:
+CREATE TABLE quote_versions (
+  id BIGSERIAL PRIMARY KEY,
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  version_number INT NOT NULL DEFAULT 1,
+  pdf_url TEXT,
+  changes_summary TEXT, -- e.g., "Changed hotel in Ubud to Bubu Jungle Resort"
+  created_by_user_id UUID REFERENCES agents(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(quote_id, version_number)
+);
+CREATE INDEX idx_quote_versions_quote_id ON quote_versions(quote_id);
+    Logic: When a sent quote is edited, a new entry in quote_versions is created, and the quotes.status is set to revised.
+
+Robust Search & Filtering API:
+
+    Action: Create a new, dedicated API endpoint for searching and filtering quotes.
+
+    Endpoint: GET /api/quotes/search
+
+    Query Parameters:
+
+        q (string, for client name or quote_ref)
+
+        status (enum quote_status)
+
+        startDate, endDate (ISO date strings for travel period)
+
+        sortBy (e.g., created_at_desc, travel_start_asc)
+
+    Performance: Create a GIN index in Postgres for full-text search.
+    SQL
+
+CREATE INDEX idx_quotes_search ON quotes USING gin (to_tsvector('english', coalesce(quote_ref, '') || ' ' || coalesce((SELECT name FROM clients WHERE id = quotes.client_id), '')));
+
+User-Generated Content Hardening:
+
+    Action: Create a Supabase Edge Function to process agent logo uploads.
+
+    Workflow:
+
+        Agents upload their logo to a dedicated Supabase Storage bucket: /agent-logo-uploads.
+
+        This upload triggers an Edge Function.
+
+        The function uses a library like sharp to:
+
+            Resize the image to a max width/height (e.g., 400px).
+
+            Convert the image to a web-optimized format like .webp.
+
+            Move the optimized file to a public bucket: /agent-logos.
+
+            Update the agents.logo_url with the new public URL.
+
+In-App Notification System:
+
+    Action: Implement a real-time, in-app notification system.
+
+    SQL:
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID REFERENCES quotes(id),
+  message TEXT NOT NULL,
+  target_url TEXT, -- e.g., /dashboard/quotes/{{quote_id}}
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE agent_notifications (
+  id BIGSERIAL PRIMARY KEY,
+  notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  read_at TIMESTAMPTZ
+);
+CREATE INDEX idx_agent_notifications_agent_id_is_read ON agent_notifications(agent_id, is_read);
+
+        Real-time: Use Supabase Realtime to push a notification to the frontend when a new row is inserted in agent_notifications for the logged-in agent.
+
+16. Architectural Resilience & Automation
+
+    Observability & Monitoring:
+
+        Error Monitoring: Integrate the Next.js frontend and all Supabase functions with Sentry. All errors must be captured automatically.
+
+        Log Management: Use a log drain (e.g., Logflare or Betterstack) to centralize and analyze Postgres and Edge Function logs.
+
+        Uptime Check: Create a public API endpoint GET /api/health that requires no authentication and returns a 200 OK with the body {"status": "ok", "timestamp": "ISO_DATE_STRING"}. This will be pinged by an external monitoring service (e.g., UptimeRobot).
+
+    CI/CD Pipeline:
+
+        Action: Create a ci.yml file for GitHub Actions.
+
+        Workflow on Pu
+
+sh/PR to main branch:
+YAML
+jobs:
+  test_and_lint:
+    # Runs ESLint and all automated tests (Jest/Vitest, Playwright).
+  build:
+    # Needs: test_and_lint
+    # Runs `next build`.
+  deploy_staging:
+    # Needs: build
+    # Deploys Supabase migrations and functions to the staging project.
+    # Deploys the Next.js app to Vercel staging.
+
+        A similar workflow will be configured for manual deployment to production.
+
+    API Rate Limiting:
+
+        Action: Implement rate limiting to prevent API abuse.
+
+        Implementation: Use Kong, the built-in Supabase Gateway, or a middleware layer.
+
+        Policy: Start with a limit of 60 requests per minute per authenticated user (agent_id).
+
+    AI Copilot - Feature Definition:
+
+        Scope: The AI Copilot will initially have three distinct, well-defined functions in the admin panel.
+
+        Functions:
+
+            Itinerary Enrichment: Given a day's notes (e.g., "Kintamani tour"), the AI will generate a rich, customer-facing description of the experience.
+
+            Business Intelligence: Allow admins to ask natural language questions about the data (e.g., "Show me the top 5 agents by revenue last quarter"). This will translate the query into SQL to query the agent_leaderboard view.
+
+            Support Ticket Summarization: When viewing a support ticket, the AI will provide a one-sentence summary of the agent's issue.
+
+        Prompt Engineering: Each function must have its own carefully crafted system prompt that provides context, rules, and desired output format (e.g., JSON).
+
+17. Business & Compliance Framework
+
+    Legal Documents:
+
+        Action: Add links to "Terms of Service" and "Privacy Policy" pages in the footer of all public B2B pages and the agent dashboard.
+
+        Onboarding: Add a mandatory checkbox "I agree to the Terms of Service and Privacy Policy" in the agent sign-up form.
+
+    Dispute & Refund Management:
+
+        Action: Create a disputes table to formally manage conflicts.
+
+        SQL:
+CREATE TYPE dispute_status AS ENUM ('open', 'investigating', 'resolved_refund', 'resolved_credit', 'rejected');
+
+CREATE TABLE disputes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id),
+  support_ticket_id UUID REFERENCES support_tickets(id),
+  agent_id UUID NOT NULL REFERENCES agents(id),
+  reason TEXT NOT NULL,
+  status dispute_status NOT NULL DEFAULT 'open',
+  resolution_details TEXT,
+  refund_amount_idr NUMERIC,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
+
+Data Archiving Policy:
+
+    Action: Implement an automated data archiving policy for performance and cost management.
+
+    Policy: Any quote where trip_status is 'completed' or 'cancelled' and travel_end is more than 2 years in the past will be considered "archived."
+
+    Implementation: Create a scheduled PostgreSQL function using pg_cron. The function will run monthly, adding a flag is_archived = true to old quotes. The standard dashboard queries will then filter for WHERE is_archived = false.
+
+
+Module 10 of 12: Critical Patches & Custom Group Bookings (v7.1)
+
+Objective: This module serves as a critical update to the v7.0 blueprint. It addresses architectural gaps that would lead to system errors and logical failures. It also introduces a new core business rule for handling large group inquiries, ensuring both platform stability and operational scalability.
+
+1. New Business Rule: Large Group Booking Flow
+
+    Rule: The automated quote generator is designed for groups up to a maximum of 33 persons. Any inquiry for 34 or more persons must be handled via a manual, custom quote process.
+
+    Frontend (UI/UX) Directive:
+
+        In the "Create New Quote" form, the input field for pax (number of persons) must have a real-time validation check.
+
+        If the agent enters a number greater than 33, the standard quote form fields (e.g., hotel options, itinerary builder) must be disabled.
+
+        An informational message must appear:
+
+            "For groups larger than 33, we provide a specialized service to ensure the best experience and pricing. Please request a custom quote, and our group booking specialist will contact you shortly."
+
+        The primary CTA button must change to [Request Custom Quote].
+
+        Clicking this button should open a modal form that captures the agent's detailed requirements (e.g., "Group Name," "Purpose of Trip," "Specific Requests") and submits this information by creating a new entry in the support_tickets table with priority = 'high' and subject = 'Custom Group Quote Request: {{Group Name}}'.
+
+    Backend (API) Hardening:
+
+        The POST /api/quotes endpoint MUST be updated with a validation rule at the very beginning of its logic.
+
+        If the request body contains "pax": > 33, the API must immediately reject the request with a 400 Bad Request error, conforming to the Standardized API Error Response Schema.
+
+        Example Error Response: JSON
+{
+  "success": false,
+  "error": {
+    "code": "PAX_LIMIT_EXCEEDED",
+    "message": "The number of persons exceeds the maximum limit for automated quotes. Please use the 'Request Custom Quote' feature for groups larger than 33.",
+    "details": "Pax value of 35 is greater than the allowed maximum of 33."
+  }
+}
+
+2. Database & API Logic Corrections
+
+This section provides explicit fixes for the identified logical flaws and potential breaking points.
+
+Fix 2.1: Prevent Zero-Cost Transport Failure
+
+    Target: calculate_quote_cost PL/pgSQL function.
+
+    Problem: The function silently calculates a transport cost of 0 if a vehicle for the required pax count isn't found, leading to incorrect quotes.
+
+    Solution: Modify the function to throw a fatal error if a rate is not found.
+
+    Implementation: Inside the main loop (FOR d IN SELECT ...), immediately after the SELECT query that fetches the v_daily_transport_rate, insert the following block:
+    SQL
+
+    IF v_daily_transport_rate IS NULL THEN
+      RAISE EXCEPTION 'CRITICAL_CONFIGURATION_ERROR: No transport rate configured for region % and pax count %.', d.region, v_pax;
+    END IF;
+
+Fix 2.2: Ensure Correct Quote Update Logic (The Upsert Fix)
+
+    Target: PUT /api/quotes/:id API Endpoint.
+
+    Problem: Updating an existing quote will fail with a UNIQUE constraint violation because the logic doesn't handle the replacement of existing itinerary and option records.
+
+    Solution: The backend logic for this endpoint MUST be implemented as a single database transaction.
+
+    Implementation Steps:
+
+        BEGIN a new transaction.
+
+        DELETE FROM quote_days WHERE quote_id = :quote_id;
+
+        DELETE FROM quote_options WHERE quote_id = :quote_id;
+
+        Loop through the day_wise_plan from the request body and INSERT the new records into quote_days.
+
+        Loop through the quote_options from the request body and INSERT the new records into quote_options.
+
+        Call the calculate_quote_cost function.
+
+        COMMIT the transaction.
+
+Fix 2.3: Clarify Client Creation Logic
+
+    Target: POST /api/quotes API Endpoint.
+
+    Problem: The logic for handling client_name is ambiguous.
+
+    Solution: The backend logic must follow this exact sequence:
+
+        Upon receiving the request, search the clients table for a record WHERE name = :client_name AND agent_id = :authenticated_agent_id.
+
+        If a client is found: Use their existing id for the quotes.client_id.
+
+        If no client is found: INSERT a new record into the clients table and use the newly generated id for the quotes.client_id.
+
+3. Performance & Quote Lifecycle Integrity
+
+Fix 3.1: Optimize Row Level Security Performance
+
+    Target: quotes table and RLS policy.
+
+    Problem: The RLS policy uses a subquery that will cause significant performance degradation at scale.
+
+    Solution: De-normalize the schema by adding the agent's clerk_id directly to the quotes table.
+
+    Implementation Steps:
+
+        Add Column: Execute this SQL command on your database:
+ALTER TABLE public.quotes ADD COLUMN clerk_id TEXT;
+
+2. Backfill Data (Crucial for existing systems): Run a one-time script to populate the new column for existing quotes:
+UPDATE public.quotes q SET clerk_id = (SELECT a.clerk_id FROM public.agents a WHERE a.id = q.agent_id);
+
+3.Update Application Logic: Modify the POST /api/quotes backend logic to copy the clerk_id from the agents table into the quotes.clerk_id field upon creation.
+
+4. Replace RLS Policy: Replace the old, slow RLS policy with this highly efficient one:
+DROP POLICY "Agents can access their own quotes" ON quotes;
+CREATE POLICY "Agents can access their own quotes" ON quotes
+FOR ALL USING ( clerk_id = auth.jwt()->>'sub' );
+
+Fix 3.2: Implement Price-Locking on Quotes
+
+    Target: The quote status lifecycle.
+
+    Problem: Quote prices can change unexpectedly while in draft status if underlying hotel or transport rates are modified by an admin.
+
+    Solution: A quote's final price must be calculated and "locked in" at a specific point in its lifecycle.
+
+    Implementation Rule: The system must be configured to call the calculate_quote_cost and update_quote_currency functions one final time during the state transition when an agent moves a quote's status from draft to sent (or final). After this transition, these cost calculation functions should not be run on the quote again unless a new version is explicitly created.
+
+Module 11 of 12: Operational Resilience & Risk Management
+
+Objective: This module addresses the unpredictable nature of the travel industry by introducing features that allow the operations team to manage large-scale disruptions and supplier-specific issues efficiently. It provides the tools to handle chaos with structure and clear communication, safeguarding both the business and its agent partners.
+
+1. Dynamic Cancellation Policy Framework
+
+    Business Need: To handle supplier-specific issues (e.g., hotel renovations) and client cancellations correctly, the system must store and apply specific, tiered cancellation policies to each booking, as these terms are a core part of the contract.
+
+    Action: Implement a database structure to define and manage cancellation policies and link a snapshot of these policies to each quote upon finalization.
+
+    Database Schema Additions:
+
+       1 Create a table for policy definitions:
+SQL
+CREATE TABLE cancellation_policies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE, -- e.g., "Standard Flexible", "Strict 30-Day", "Non-Refundable"
+    description TEXT,
+    is_default BOOLEAN NOT NULL DEFAULT false
+);
+
+2 Create a table for the specific rules of each policy:
+
+sql
+CREATE TABLE cancellation_policy_rules (
+    id BIGSERIAL PRIMARY KEY,
+    policy_id UUID NOT NULL REFERENCES cancellation_policies(id) ON DELETE CASCADE,
+    days_before_arrival INT NOT NULL, -- The rule applies if cancellation is this many days or more before travel_start
+    refund_percentage NUMERIC NOT NULL CHECK (refund_percentage >= 0 AND refund_percentage <= 100),
+    notes TEXT, -- e.g., "Full refund excluding service fees"
+    UNIQUE(policy_id, days_before_arrival)
+);
+
+3 Link policies to suppliers: Add a nullable foreign key to supplier tables
+SQL
+ALTER TABLE public.hotels ADD COLUMN cancellation_policy_id UUID REFERENCES cancellation_policies(id) ON DELETE SET NULL;
+ALTER TABLE public.activities ADD COLUMN cancellation_policy_id UUID REFERENCES cancellation_policies(id) ON DELETE SET NULL;
+
+Add a policy snapshot to the core quotes table: This is critical for keeping a permanent record of the terms at the time of booking.
+
+SQL
+ALTER TABLE public.quotes ADD COLUMN cancellation_policy_snapshot JSONB;
+
+Implementation Logic & Workflow:
+
+    Admin Panel: Create a new section in the admin panel to manage cancellation_policies and their associated cancellation_policy_rules. Allow admins to set one policy as the site-wide is_default.
+
+    Linking: In the "Edit Hotel" and "Edit Activity" pages, add a dropdown to assign a specific cancellation policy. If none is assigned, the default policy will be used.
+
+    Snapshot Trigger: When a quote's status is moved from draft to sent or final (the "price-locking" event), the backend MUST:
+
+        Determine the strictest applicable cancellation policy from all items in the quote (hotels, activities).
+
+        Fetch all rules for that policy from cancellation_policy_rules.
+
+        Save these rules as a JSON array into the quotes.cancellation_policy_snapshot field.
+
+    PDF Generation: The generated quote PDF must include a clear section detailing the applicable cancellation policy, populated from the cancellation_policy_snapshot.
+
+2. Crisis Management & Bulk Operations
+
+    Business Need: To manage mass disruption events (e.g., volcanic eruption, airport closure) that affect numerous bookings over a specific date range, the operations team needs a tool to perform bulk updates and communications.
+
+    Action: Implement a "Crisis Mode" feature in the admin panel.
+
+    Database Schema Addition:
+
+        Add a new quote_status to handle these events:
+SQL
+-- This command adds the new status to the existing ENUM type.
+ALTER TYPE quote_status ADD VALUE 'on_hold_external_issue';
+
+Admin Panel UI/UX Directive:
+
+    Create a new, dedicated page in the admin panel titled "Bulk Actions & Crisis Management." This page should be accessible only to super_admin roles.
+
+    The UI must contain:
+
+        A date range picker with "Start Date" and "End Date" fields.
+
+        A "Filter Bookings" button.
+
+    When clicked, the button triggers an API call that returns a table of all quotes where status = 'paid' and the travel_start date falls within the selected range.
+
+    The table must display key information (quote_ref, agent_name, client_name, travel_start, pax).
+
+    Above the table, provide a "Select All" checkbox and a dropdown menu of bulk actions. The first action will be "Change Status to 'On Hold (External Issue)'".
+
+    An "Apply Bulk Update" button executes the action.
+
+Backend API Endpoint:
+
+    Create a new, secure admin-only endpoint: POST /api/admin/bulk-quote-update.
+
+    Request Body:
+SQL
+{
+  "quote_ids": ["uuid1", "uuid2", "uuid3", ...],
+  "action": "change_status",
+  "data": {
+    "new_status": "on_hold_external_issue"
+  }
+}
+
+        Logic: The endpoint should update the status for all provided quote_ids in a single transaction. Upon successful update, it should trigger a bulk email dispatch.
+
+    New Notification Template:
+
+        Name: External Disruption Notification
+
+        Subject: ⚠️ Important Update Regarding Your Booking {{quote_ref}}
+
+        Body:
+
+            "Hi {{agent_name}},
+            Due to an unforeseen external event (e.g., airport closure, severe weather), travel to Bali is currently impacted. To safeguard your client's booking, we have placed the trip with reference {{quote_ref}} (Client: {{client_name}}) on temporary hold.
+            There is no action required from you at this time. Our operations team is actively monitoring the situation and will provide a further update within 24 hours. We appreciate your understanding.
+            Sincerely,
+            The Bali Malayali Team"
+
+
+
+🔒🧾 Module 12 of 12 — Payment Modes, Conversion Funnel, Resilience, and Anti-Spam Logic
+
+This module ensures real-world operability by adding offline payment flexibility, quote funnel tracking, fault-tolerant FX/PDF workflows, and anti-bot protection.
+🧾 12.1 OFFLINE PAYMENT SUPPORT (BANK TRANSFER / UPI / NEFT)
+✅ Feature Description
+
+Agents can choose offline/manual payment method during checkout (e.g., bank transfer, UPI QR, NEFT). Admin must verify and mark it as paid.
+🧩 Database Changes
+
+ALTER TABLE payments
+  ADD COLUMN is_manual BOOLEAN DEFAULT false,
+  ADD COLUMN proof_url TEXT, -- screenshot of receipt
+  ADD COLUMN verified_by UUID REFERENCES agents(id), -- admin who approved
+  ADD COLUMN verified_at TIMESTAMPTZ;
+
+🖥 Admin Flow
+
+    New admin page /admin/manual-payments
+
+    Show payments where status = 'pending' AND is_manual = true
+
+    Admin clicks "Approve", enters verified_by, changes status to succeeded
+
+📊 12.2 QUOTE FUNNEL TRACKING & ANALYTICS
+✅ Feature Description
+
+Track all agent actions per quote lifecycle for performance dashboards and AI Copilot.
+🧩 Database Changes
+CREATE TABLE quote_funnel_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID REFERENCES quotes(id),
+  agent_id UUID REFERENCES agents(id),
+  event_type TEXT CHECK (event_type IN ('created', 'sent_to_client', 'client_viewed', 'revised', 'finalized', 'paid')),
+  metadata JSONB,
+  occurred_at TIMESTAMPTZ DEFAULT now()
+);
+
+
+💡 Examples
+
+    When quote is sent via WhatsApp: insert event sent_to_client
+
+    When payment received: insert event paid
+
+    When revised: insert event revised with old vs new totals
+
+🔄 12.3 RETRY QUEUE FOR FAILED FX / PDF / API JOBS
+✅ Feature Description
+
+If PDF generation, FX fetching, or quote sync fails, the system retries or allows admin to re-run jobs.
+🧩 Database Changes
+CREATE TABLE retry_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_type TEXT CHECK (job_type IN ('pdf_generation', 'fx_fetch', 'email_send')),
+  reference_id UUID, -- quote_id, etc.
+  payload JSONB,
+  attempts INT DEFAULT 0,
+  max_attempts INT DEFAULT 3,
+  status TEXT CHECK (status IN ('pending', 'in_progress', 'failed', 'succeeded')) DEFAULT 'pending',
+  error_log TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  last_attempt_at TIMESTAMPTZ
+);
+
+⚙️ Behavior
+
+    Every failed PDF or FX job logs here
+
+    Cron retries pending jobs hourly
+
+    Admin panel allows manual "Retry Job"
+
+🛡 12.4 ANTI-SPAM + SIGNUP APPROVAL LOGIC
+✅ Feature Description
+
+Prevents spam or fake signups by enforcing Google reCAPTCHA + optional manual approval for new agents.
+🔐 Changes in Clerk or Auth Flow
+
+    Use Clerk.dev's built-in reCAPTCHA support
+
+    Add is_approved column to agents table:
+ALTER TABLE agents
+  ADD COLUMN is_approved BOOLEAN DEFAULT false;
+
+
+    During onboarding:
+
+        Set is_approved = false
+
+        Hide dashboard access if not approved
+
+    Add admin dashboard button to approve new agents
+
+
+

@@ -1,0 +1,152 @@
+# Final Implementation Spec: Public Website & Onboarding (v3.0)
+
+**Objective:** To build a complete, persuasive, and visually stunning public-facing website and a seamless new-user onboarding flow. This directive contains the definitive content, layout, and functionality for all pages that are currently missing or need refinement.
+
+---
+
+### **Part 1: Global Directives**
+
+#### **1.1. Core Design Language**
+
+All new pages must strictly adhere to the established "premium, dark, and professional" design language.
+* **Theme:** Dark Mode First.
+* **Colors:**
+    * Primary Background: Deep charcoal (`#111827`).
+    * Card/Secondary Background: Slate gray (`#1F2937`).
+    * Primary Accent: The "Bali Malayali" gradient (`from-blue-500 to-green-500`).
+    * Primary Text: Off-white (`#E5E7EB`).
+    * Muted Text / Sub-headlines: Soft gray (`#9CA3AF`).
+* **Typography:** Use `Inter` for headings and `Source Sans 3` for body text.
+* **Imagery:** Use professional, high-resolution photos of Bali from Unsplash/Pexels. Search terms: "luxury Seminyak villa pool," "serene Ubud rice fields sunrise," "Uluwatu cliffside ocean aerial view."
+
+#### **1.2. Global Content Updates**
+
+The following text changes must be made across the entire site to align with our business model.
+* **Header Button:** The main "Get Started" button must be renamed to **"Join for Free"**.
+* **CTA Buttons:** All instances of "Start Your Free Trial" must be changed to **"Join for Free & Start Earning"**.
+
+---
+
+### **Part 2: Detailed Page Specifications**
+
+This section details the required content and structure for every page currently giving a 404 error.
+
+#### **1. The `/pricing` Page**
+
+* **Page Goal:** To transparently explain the platform's free-to-use, commission-based partnership model and incentivize agents to increase their booking volume.
+* **H1:** A Partnership That Pays
+* **Sub-headline:** Our platform is 100% free for travel agents. No subscriptions, no hidden fees. We only succeed when you do.
+
+* **Component: How It Works Section**
+    * **Description:** A simple, 2-step graphic explaining the financial flow.
+    * **Step 1 Title:** You Sell & Add Your Markup
+        * **Text:** Use our platform to create professional quotes with our confidential net rates. You have complete freedom to add your own profit margin or service fee on top of the final price you show your client.
+    * **Step 2 Title:** You Get Paid, We Share
+        * **Text:** After your client pays, you receive the full amount, including your markup. Our commission is then calculated on the B2B net price of the booking. It's that simple and transparent.
+
+* **Component: Performance Discount Tiers**
+    * **Headline:** The More You Book, The Better Your Rates
+    * **Sub-headline:** All partners start with our competitive standard rates. As your booking volume increases, you automatically unlock Performance Discounts, increasing your profitability.
+    * **Layout:** A 3-column table comparing the tiers.
+
+| Tier | Bronze | Silver | Gold |
+| :--- | :--- | :--- | :--- |
+| **Description** | For new partners getting started. | For established agents with consistent volume. | For our top-performing power agents. |
+| **Qualification** | 0-10 Bookings / Qtr | 11-25 Bookings / Qtr | 26+ Bookings / Qtr |
+| **Performance Discount** | **Standard Rate** | **2% Extra Discount** | **5% Extra Discount** |
+| **Your Payout** | 90% of Net Rate | 92% of Net Rate | 95% of Net Rate |
+| **Support Level** | Standard Email | Priority Email | Dedicated Account Manager |
+
+#### **2. The `/why-us` Page**
+
+* **Page Goal:** To clearly articulate the value proposition by contrasting the inefficient old methods with the streamlined experience of the Bali Malayali platform.
+* **H1:** Stop Juggling Spreadsheets. Start Selling.
+* **Sub-headline:** We built a platform that works the way you do—fast, professional, and profitable.
+* **Component: The "Before & After" Showcase**
+    * **Layout:** A side-by-side comparison section.
+    * **"BEFORE: The Chaos" (Left Side)**
+        * **Headline:** The 2 AM Panic.
+        * **Text:** "Cross-referencing three outdated spreadsheets, a dozen WhatsApp chats, and a volatile currency website just to confirm a hotel price for a client who needed it an hour ago. Sound familiar? The manual process is not just slow; it's costing you money and client confidence."
+    * **"AFTER: The Control" (Right Side)**
+        * **Headline:** The 5-Minute Masterpiece.
+        * **Text:** "A single click. Live hotel rates, transport costs, and your profit margin are calculated instantly. A professional, branded PDF is generated and ready to send. This is the new standard of B2B travel in Bali."
+        * **Visual:** A high-quality, polished screenshot of the platform's Quote Editor UI should be displayed here.
+
+#### **3. The `/about-us` Page**
+
+* **Page Goal:** To build trust and connection by sharing the company's story, mission, and values.
+* **H1:** We're Obsessed with Empowering Travel Agents.
+* **Component: Our Story**
+    * **Content:**
+        > "Founded in early 2024 by a team of Bali-based travel operators and technologists, Bali Malayali was born from a shared frustration. We saw firsthand how much time and potential profit was lost to outdated tools and manual workflows. We knew that the passionate, hardworking travel agents who specialize in creating magical Bali experiences deserved better.
+        >
+        > Our mission is to provide the technology backbone that allows you to compete and win in a modern travel market. We handle the complexities of pricing, documents, and payments so you can focus on your true passion: crafting unforgettable journeys for your clients. We are not just a software company; we are your dedicated partner in Bali."
+* **Component: Our Values**
+    * **Layout:** A 3-column grid with icons.
+    * **Value 1: Agent-Obsessed:** "Our success is measured by the success of our agents. Every feature we build is designed to solve a real-world problem for you."
+    * **Value 2: Radical Transparency:** "From our pricing model to our communication, we believe in being open and honest. No hidden fees, no surprises."
+    * **Value 3: Technological Craftsmanship:** "We believe in building tools that are not only powerful but also beautiful and a joy to use. We sweat the details so you don't have to."
+
+#### **4. The `/blog` Page**
+
+* **Page Goal:** To demonstrate expertise, provide value to agents, and improve SEO.
+* **H1:** Bali B2B Insights
+* **Layout:** A grid of blog post cards.
+* **Post 1 (Full Content):**
+    * **Title:** The Rise of Experiential Travel in Nusa Penida
+    * **Date & Author:** June 27, 2025 - By Adhil Bhaskaran
+    * **Body:** "Nusa Penida is no longer just a day trip for your clients; it's a destination in its own right. Today's travelers are bypassing the crowds and seeking immersive experiences, from multi-night stays in unique eco-lodges to private manta ray snorkeling tours and guided treks to hidden waterfalls. These high-value activities are key to creating premium packages. Our platform makes it easy to find and bundle these curated local experiences into your quotes, increasing both client satisfaction and your profit margins. Instead of selling a simple hotel stay, you can now sell an unforgettable adventure."
+* **Post 2 (Full Content):**
+    * **Title:** How to Use Pricing Psychology to Sell More High-End Bali Packages
+    * **Date & Author:** June 20, 2025 - By Adhil Bhaskaran
+    * **Body:** "Presenting clients with 'Good, Better, Best' options is a proven sales strategy that builds confidence and often leads to up-sells. Our multi-option quote feature is designed specifically for this. By showcasing a luxury villa next to a standard hotel, you anchor the value and make the premium choice feel more compelling and justified. Stop sending single-option quotes; start guiding your clients towards the exceptional experiences you know they'll love, while simultaneously boosting your average booking value."
+
+#### **5. The `/careers` Page**
+
+* **Page Goal:** To attract high-quality talent aligned with the company's mission.
+* **H1:** Build the Future of Travel Tech with Us
+* **Content:**
+    > "We are a passionate, remote-first team of technologists and travel lovers dedicated to revolutionizing the B2B travel space. If you are obsessed with building amazing products and empowering entrepreneurs, we'd love to hear from you."
+* **Component: Job Openings**
+    * **Opening 1: Senior Full-Stack Engineer (Next.js/Supabase)**
+        * **Description:** "You will take a leading role in developing new features, optimizing performance, and maintaining the high quality of our codebase. You'll work across our entire stack, from complex PostgreSQL functions to interactive React components."
+        * **Requirements:** "5+ years of experience with TypeScript, React/Next.js, and PostgreSQL. A deep understanding of API design and database architecture. A passion for writing clean, maintainable code."
+    * **Opening 2: Partner Success Manager**
+        * **Description:** "You will be the primary contact for our new agents, responsible for providing exceptional onboarding, training, and ongoing support to ensure they achieve success with our platform."
+        * **Requirements:** "3+ years of experience in a customer-facing role, preferably in the travel or SaaS industry. Excellent communication skills and a genuine passion for helping people."
+
+#### **6. Legal Pages (`/privacy-policy`, `/terms-of-service`)**
+
+* **Page Goal:** To provide standard, professional legal documentation.
+* **Disclaimer (at the top of each page):** `Note: This is a sample document for layout purposes. It must be reviewed and replaced by a qualified legal professional before launch.`
+* **Content:** Use a professional boilerplate generator to create detailed text for a Privacy Policy and Terms of Service. Structure the content with clear headings (e.g., `1. Data We Collect`, `2. How We Use Your Data`, `3. User Responsibilities`, `4. Limitation of Liability`).
+
+---
+
+### **Part 5: New User Onboarding Experience (Final Spec)**
+
+* **Directive:** The "Empty State" dashboard for new users must be welcoming and action-oriented.
+* **Implementation:**
+    * A large, centered welcome card should be displayed when `quotes.length === 0`.
+    * **Personalized Greeting:** `<h2>Welcome, [Agent's Name]! Let's create your first Bali masterpiece.</h2>`
+    * **Primary CTA:** A large, primary-colored button: `[+ Create Your First Quote]`
+    * **Onboarding Checklist (with `lucide-react` icons):**
+        * `(icon: <UserCircle />)` **Complete Your Profile** (links to `/settings`)
+        * `(icon: <Image />)` **Upload Your Agency Logo** (links to `/settings`)
+        * `(icon: <FilePlus2 />)` **Create Your First Quote** (triggers the create quote modal)
+* **Pro-Tier Enhancement: Guided Tour Script**
+    * Use `Shepherd.js` to create this 4-step tour on the first login.
+        1.  **Step 1 (Attach to `#create-quote-btn`):** "Welcome! This is where the magic begins. Click here to start building your first professional quote in minutes."
+        2.  **Step 2 (Attach to `#sidebar-support-link`):** "If you ever have a question or need help, our support team is just a click away."
+        3.  **Step 3 (Attach to `#sidebar-settings-link`):** "Don't forget to visit your settings to upload your agency logo. This will ensure all your quotes are perfectly branded."
+        4.  **Step 4 (Attach to `#user-button`):** "You can manage your account details and sign out from here. We're thrilled to have you with us!"
+
+---
+
+### **Developer Action Plan Summary:**
+
+1.  **Update Global CTAs:** Change all "Free Trial" button text.
+2.  **Build All Pages:** Create a new page file in the `app` directory for every link listed above.
+3.  **Implement All Content:** Use the detailed content, headlines, and layouts provided in this prompt for each new page.
+4.  **Implement Empty State:** Build the special dashboard view for new users.
+5.  **Test:** Ensure all new pages are fully responsive and that all internal links work correctly with no 404 errors.

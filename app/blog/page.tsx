@@ -12,14 +12,20 @@ export default function BlogPage() {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative py-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-green-500/10" />
+      <section className="relative py-20 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80"
+          alt="Bali travel blogging and content creation"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-green-500/20" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6 text-white">
               Travel Industry Insights
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
+            <p className="text-xl text-white/90 max-w-3xl mx-auto mb-10">
               Expert tips, market trends, and success stories to help you grow your travel business.
             </p>
           </div>

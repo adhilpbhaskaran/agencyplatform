@@ -12,14 +12,20 @@ export default function PricingPage() {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-green-500/10" />
+      <section className="relative py-20 sm:py-32 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+          alt="Bali beach sunset with traditional boats"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-green-500/20" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center">
-            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
+            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6 text-white">
               A Partnership That Pays
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
+            <p className="text-xl text-white/90 max-w-3xl mx-auto mb-10">
               Our platform is 100% free for travel agents. No subscriptions, no hidden fees. We only succeed when you do.
             </p>
           </div>

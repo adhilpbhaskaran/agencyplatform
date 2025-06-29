@@ -61,18 +61,25 @@ export default function PartnerWithUsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative border-b border-border overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1555400082-8c5cd5b3c3d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+          alt="Bali tropical paradise with palm trees"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-green-500/20" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
           <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold mb-6">
-              Join the Fastest-Growing Network of
-              <span className="block bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
-                Bali Travel Experts
-              </span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Partner with us to access better pricing, faster turnaround times, higher profits, and a professional image that sets you apart.
-            </p>
+            <h1 className="text-4xl sm:text-5xl font-bold mb-6 text-white">
+                Join the Fastest-Growing Network of
+                <span className="block bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                  Bali Travel Experts
+                </span>
+              </h1>
+              <p className="text-xl text-white/90 max-w-3xl mx-auto">
+                Partner with us to access better pricing, faster turnaround times, higher profits, and a professional image that sets you apart.
+              </p>
           </div>
         </div>
       </div>

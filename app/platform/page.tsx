@@ -86,22 +86,29 @@ export default function PlatformPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {/* Hero Section */}
+      <section className="relative py-20 sm:py-32 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80"
+          alt="Bali digital workspace and technology"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-green-500/20" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold mb-6">
+            <h1 className="text-4xl sm:text-5xl font-bold mb-6 text-white">
               The Complete
-              <span className="block bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
                 Travel Agent Platform
               </span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-xl text-gray-200 max-w-3xl mx-auto">
               Everything you need to run a successful Bali travel business, from quote generation to payment processing, all in one powerful platform.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Key Features */}
       <section className="py-20">

@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
 
     // Call the manual FX update function
     const { data: result, error } = await supabase
-      .rpc('trigger_fx_update');
+      .rpc('fetch_and_store_exchange_rates');
 
     if (error) {
       console.error('Error triggering FX update:', error);

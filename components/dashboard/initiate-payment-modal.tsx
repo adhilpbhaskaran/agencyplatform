@@ -40,12 +40,12 @@ export default function InitiatePaymentModal({
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Client:</span>
-                <span className="text-gray-900">{quote.clients?.full_name}</span>
+                <span className="text-gray-900">{quote.clients?.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount:</span>
                 <span className="text-gray-900 font-medium">
-                  IDR {quote.final_price_idr?.toLocaleString() || '0'}
+                  IDR {quote.final_total_idr?.toLocaleString() || '0'}
                 </span>
               </div>
               <div className="flex justify-between">

@@ -3,9 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ArrowRight, Search, MessageCircle, Users, TrendingUp, Clock, Heart, Reply, Pin, Star, Filter } from 'lucide-react'
+import { MessageSquare, MessageCircle, ThumbsUp, Clock, Search, TrendingUp, Users, ArrowRight, Star, Calendar, Eye, Pin, Reply, Heart, Filter } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
 import Footer from '@/components/footer'
 
 export default function CommunityForumPage() {
@@ -181,7 +180,6 @@ export default function CommunityForumPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32">

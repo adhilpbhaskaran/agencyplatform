@@ -2,14 +2,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
 import { ArrowRight, Users, Globe, Heart, Target, Award, MapPin } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 import Image from 'next/image'
 
 export default function AboutUsPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32 overflow-hidden">

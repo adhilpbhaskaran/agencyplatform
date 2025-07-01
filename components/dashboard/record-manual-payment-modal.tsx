@@ -18,7 +18,7 @@ interface RecordManualPaymentModalProps {
 export interface ManualPaymentData {
   amount: number;
   payment_method: string;
-  transaction_id?: string;
+  gateway_transaction_id?: string;
   proof_file?: File;
   notes?: string;
 }
@@ -30,9 +30,9 @@ export default function RecordManualPaymentModal({
   isSubmitting = false
 }: RecordManualPaymentModalProps) {
   const [formData, setFormData] = useState<ManualPaymentData>({
-    amount: quote.final_price_idr || 0,
+    amount: quote.final_total_idr || 0,
     payment_method: 'bank_transfer',
-    transaction_id: '',
+    gateway_transaction_id: '',
     notes: ''
   });
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -112,7 +112,7 @@ export default function RecordManualPaymentModal({
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Client:</span>
-                <span className="text-gray-900">{quote.clients?.full_name}</span>
+                <span className="text-gray-900">{quote.clients?.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Quote #:</span>
@@ -121,7 +121,7 @@ export default function RecordManualPaymentModal({
               <div className="flex justify-between">
                 <span className="text-gray-600">Expected Amount:</span>
                 <span className="text-gray-900 font-medium">
-                  IDR {quote.final_price_idr?.toLocaleString() || '0'}
+                  IDR {quote.final_total_idr?.toLocaleString() || '0'}
                 </span>
               </div>
             </div>
@@ -165,8 +165,8 @@ export default function RecordManualPaymentModal({
             </label>
             <Input
               type="text"
-              value={formData.transaction_id}
-              onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
+              value={formData.gateway_transaction_id}
+              onChange={(e) => setFormData({ ...formData, gateway_transaction_id: e.target.value })}
               placeholder="Enter transaction reference number"
             />
           </div>

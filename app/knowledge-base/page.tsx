@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ArrowRight, Search, Book, Video, FileText, Download, Clock, User, Star, Filter } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 
 export default function KnowledgeBasePage() {
@@ -133,7 +133,7 @@ export default function KnowledgeBasePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32">

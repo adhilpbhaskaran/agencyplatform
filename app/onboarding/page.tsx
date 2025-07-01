@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Circle, ArrowRight, Star, Users, Globe, TrendingUp, Zap, Award } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 
 interface ChecklistItem {
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="py-20">

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
 export default function AboutBaliPage() {
   const galleryCategories = [
     {
@@ -176,6 +177,7 @@ export default function AboutBaliPage() {
 
   return (
     <div className="min-h-screen bg-background">
+
       {/* Hero Section */}
       <div className="relative h-[80vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">

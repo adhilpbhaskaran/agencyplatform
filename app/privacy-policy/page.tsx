@@ -1,10 +1,9 @@
-import Navigation from '@/components/navigation'
 import Footer from '@/components/footer'
 
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="py-20">

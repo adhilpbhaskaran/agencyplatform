@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowRight, Cookie, Shield, Settings, Info, CheckCircle, XCircle } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 
 export default function CookiePolicyPage() {
@@ -106,7 +106,7 @@ export default function CookiePolicyPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32">

@@ -1,19 +1,17 @@
+'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Database } from '@/types/database';
 
-export type Quote = Database['public']['Tables']['quotes']['Row'] & {
-  clients: Database['public']['Tables']['clients']['Row'];
-  quote_hotels?: (Database['public']['Tables']['quote_hotels']['Row'] & {
-    hotels: Database['public']['Tables']['hotels']['Row'];
-    hotel_rooms: Database['public']['Tables']['hotel_rooms']['Row'];
-  })[];
-  quote_transport?: (Database['public']['Tables']['quote_transport']['Row'] & {
-    transport_services: Database['public']['Tables']['transport_services']['Row'] & {
-      transport_providers: Database['public']['Tables']['transport_providers']['Row'];
-    };
-  })[];
-  day_wise_plan?: DayPlan[];
-  quote_options?: QuoteOption[];
+export type Quote = Omit<Database['public']['Tables']['quotes']['Row'], 'children'> & {
+  childrenCount?: number | null;
+  clients?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  } | null;
+  quote_days?: Database['public']['Tables']['quote_days']['Row'][];
+  quote_options?: Database['public']['Tables']['quote_options']['Row'][];
 };
 
 export interface QuotesResponse {
@@ -29,20 +27,20 @@ export interface QuotesResponse {
 interface DayPlan {
   id?: string;
   day_number: number;
-  location: string;
-  activities: string;
-  accommodation: string;
-  meals: string;
-  transportation: string;
+  day_date: string;
+  region: 'mainland' | 'nusa_penida';
+  activities: string | null;
+  notes: string | null;
+  entry_fee_ids: string[] | null;
 }
 
 interface QuoteOption {
   id?: string;
-  option_type: 'hotel' | 'activity' | 'transport';
-  name: string;
-  description: string;
-  cost_per_person_idr: number;
-  is_selected: boolean;
+  option_number: number;
+  hotel_room_ids: string[] | null;
+  room_cost_idr: number | null;
+  land_cost_idr: number | null;
+  total_cost_idr: number | null;
 }
 
 interface CreateQuoteData {
@@ -50,10 +48,9 @@ interface CreateQuoteData {
   client_email: string;
   client_phone?: string;
   client_nationality?: string;
-  check_in_date: string;
-  check_out_date: string;
-  adults: number;
-  children?: number;
+  travel_start: string;
+  travel_end: string;
+  pax: number;
   currency_display?: string;
   agent_margin_percentage?: number;
   hotels?: {
@@ -74,7 +71,7 @@ interface CreateQuoteData {
 }
 
 interface UpdateQuoteData {
-  day_wise_plan?: DayPlan[];
+  quote_days?: DayPlan[];
   quote_options?: QuoteOption[];
 }
 

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowRight, Search, Book, Video, MessageCircle, Phone, Mail, Clock, HelpCircle, FileText } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 
 export default function HelpCenterPage() {
@@ -87,7 +87,7 @@ export default function HelpCenterPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32">

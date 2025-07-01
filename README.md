@@ -1,278 +1,183 @@
-# Bali Malayali B2B Travel Platform
+# Supabase CLI
 
-A comprehensive B2B travel platform designed specifically for Malayali travel agents specializing in Bali tourism. This platform enables agents to create professional quotes, manage bookings, track payments, and grow their travel business with intelligent pricing and real-time exchange rates.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## 🌟 Features
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-### Core Functionality
-- **Smart Quote Generator**: Create professional quotes with intelligent pricing engine
-- **Real-time Pricing**: Dynamic pricing with live exchange rates and automatic margin calculations
-- **Client Management**: Comprehensive CRM to manage clients and track interactions
-- **Payment Processing**: Multi-currency payment processing with automated commission tracking
-- **Analytics Dashboard**: Detailed analytics, conversion rates, and revenue insights
-- **White-label PDFs**: Professional, branded quote PDFs with company customization
+This repository contains all the functionality for Supabase CLI.
 
-### Advanced Features
-- **Multi-currency Support**: All monetary logic in IDR with display currency conversion
-- **Real-time Notifications**: In-app notification system with Supabase Realtime
-- **Exchange Rate Monitoring**: Automatic FX rate updates with drift detection
-- **Quote Expiry Management**: Automated quote expiration based on time and rate changes
-- **Commission Tracking**: Automated commission calculations and payouts
-- **Audit Trail**: Comprehensive logging and audit functionality
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-## 🛠 Tech Stack
+## Getting started
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
-- **Authentication**: Clerk.dev
-- **PDF Generation**: Puppeteer
-- **UI Components**: Radix UI, Lucide Icons
-- **Styling**: Tailwind CSS with custom Bali Malayali branding
-- **Database**: PostgreSQL with Row Level Security (RLS)
-- **Real-time**: Supabase Realtime subscriptions
+### Install the CLI
 
-## 📋 Prerequisites
-
-- Node.js 18+ and npm/yarn
-- Supabase account and project
-- Clerk.dev account and application
-- Git for version control
-
-## 🚀 Getting Started
-
-### 1. Clone the Repository
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-git clone <repository-url>
-cd bali-malayali-b2b-platform
+npm i supabase --save-dev
 ```
 
-### 2. Install Dependencies
+To install the beta release channel:
 
 ```bash
-npm install
-# or
-yarn install
+npm i supabase@beta --save-dev
 ```
 
-### 3. Environment Setup
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-Copy the example environment file and configure your variables:
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
+
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+
+<details>
+  <summary><b>macOS</b></summary>
+
+  Available via [Homebrew](https://brew.sh). To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Windows</b></summary>
+
+  Available via [Scoop](https://scoop.sh). To install:
+
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
 
 ```bash
-cp .env.local.example .env.local
+supabase bootstrap
 ```
 
-Update `.env.local` with your actual values:
-
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
-
-# Application Configuration
-NEXT_PUBLIC_APP_NAME="Bali Malayali"
-NEXT_PUBLIC_APP_VERSION="1.0.0"
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Exchange Rate API
-EXCHANGE_RATE_API_KEY=your_exchange_rate_api_key
-
-# Other configurations...
-```
-
-### 4. Database Setup
-
-#### Initialize Supabase Project
-
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Copy your project URL and anon key to `.env.local`
-3. Run the database migrations:
+Or using npx:
 
 ```bash
-# Install Supabase CLI if not already installed
-npm install -g supabase
-
-# Login to Supabase
-supabase login
-
-# Link to your project
-supabase link --project-ref your-project-ref
-
-# Run migrations
-supabase db push
+npx supabase bootstrap
 ```
 
-#### Manual Database Setup (Alternative)
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
 
-If you prefer to set up the database manually:
+## Docs
 
-1. Go to your Supabase project dashboard
-2. Navigate to SQL Editor
-3. Run the contents of `supabase/migrations/20240101000000_initial_schema.sql`
-4. Run the contents of `supabase/migrations/20240101000001_demo_data.sql` for sample data
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
 
-### 5. Clerk Authentication Setup
+## Breaking changes
 
-1. Create a Clerk application at [clerk.dev](https://clerk.dev)
-2. Configure your Clerk settings:
-   - Enable email/password authentication
-   - Set up social providers if desired
-   - Configure webhooks for user creation
-3. Add your Clerk keys to `.env.local`
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
 
-### 6. Storage Configuration
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
 
-Configure Supabase Storage buckets:
+## Developing
 
-1. Go to Storage in your Supabase dashboard
-2. Create buckets:
-   - `quotes-pdf` (for generated quote PDFs)
-   - `agent-logos` (for agent company logos)
-3. Set appropriate bucket policies for security
+To run from source:
 
-### 7. Run the Development Server
-
-```bash
-npm run dev
-# or
-yarn dev
+```sh
+# Go >= 1.22
+go run . help
 ```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 📁 Project Structure
-
-```
-bali-malayali-b2b-platform/
-├── app/                    # Next.js 14 app directory
-│   ├── dashboard/         # Dashboard pages
-│   ├── api/              # API routes
-│   ├── globals.css       # Global styles
-│   ├── layout.tsx        # Root layout
-│   └── page.tsx          # Landing page
-├── components/           # React components
-│   ├── ui/              # Reusable UI components
-│   └── dashboard/       # Dashboard-specific components
-├── lib/                 # Utility functions
-│   ├── supabase.ts     # Supabase client
-│   └── utils.ts        # General utilities
-├── types/              # TypeScript type definitions
-│   └── database.ts     # Database types
-├── supabase/           # Supabase configuration
-│   ├── config.toml     # Supabase config
-│   └── migrations/     # Database migrations
-├── public/             # Static assets
-└── package.json        # Dependencies and scripts
-```
-
-## 🔧 Development Phases
-
-The project is organized into phases for systematic development:
-
-- **✅ PHASE 0**: Supabase Schema Setup
-- **✅ PHASE 1**: UI Foundation & Authentication
-- **🚧 PHASE 2**: Core Quote Management
-- **⏳ PHASE 3**: Payment Integration
-- **⏳ PHASE 4**: PDF Generation & Storage
-- **⏳ PHASE 5**: FX Engine & Expiry Monitor
-- **⏳ PHASE 6**: AI Copilot (Optional)
-
-## 🧪 Testing
-
-```bash
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run E2E tests
-npm run test:e2e
-```
-
-## 🚀 Deployment
-
-### Vercel Deployment (Recommended)
-
-1. Connect your repository to Vercel
-2. Configure environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### Manual Deployment
-
-```bash
-# Build the application
-npm run build
-
-# Start production server
-npm start
-```
-
-## 📊 Database Schema
-
-The platform uses a comprehensive PostgreSQL schema with:
-
-- **Core Tables**: agents, clients, quotes, hotels, transport
-- **Financial**: payments, commissions, exchange_rates
-- **System**: notifications, audit_logs, retry_queue
-- **Analytics**: quote_funnel_events, system_logs
-
-All tables include Row Level Security (RLS) policies for data isolation.
-
-## 🔐 Security Features
-
-- **Authentication**: Clerk.dev integration with social providers
-- **Authorization**: Row Level Security (RLS) in Supabase
-- **Data Validation**: TypeScript and Zod schema validation
-- **API Security**: Rate limiting and input sanitization
-- **Audit Trail**: Comprehensive logging of all actions
-
-## 🌍 Internationalization
-
-- **Currency**: All internal calculations in IDR
-- **Display**: Multi-currency display with real-time conversion
-- **Localization**: Support for English and regional languages
-
-## 📈 Performance Optimizations
-
-- **Database**: Optimized indexes and materialized views
-- **Caching**: Redis caching for frequently accessed data
-- **CDN**: Static asset delivery via Vercel Edge Network
-- **Real-time**: Efficient Supabase Realtime subscriptions
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-
-- 📧 Email: support@balimalayali.com
-- 📱 WhatsApp: +62 XXX XXX XXXX
-- 💬 Discord: [Join our community](https://discord.gg/balimalayali)
-
-## 🙏 Acknowledgments
-
-- Built with ❤️ for the Malayali travel community
-- Powered by Supabase and Vercel
-- UI components by Radix UI
-- Icons by Lucide
-
----
-
-**Ready to transform your travel business? Let's build something amazing together! 🌴✈️**

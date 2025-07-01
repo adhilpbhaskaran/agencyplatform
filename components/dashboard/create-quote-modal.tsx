@@ -20,8 +20,7 @@ export function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalProps) {
     clientPhone: '',
     startDate: '',
     endDate: '',
-    adults: 1,
-    children: 0,
+    guestCount: 1,
   });
 
   const createQuoteMutation = useCreateQuote();
@@ -36,10 +35,9 @@ export function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalProps) {
         client_email: formData.clientEmail,
         client_phone: formData.clientPhone,
 
-        check_in_date: formData.startDate,
-        check_out_date: formData.endDate,
-        adults: formData.adults,
-        children: formData.children,
+        travel_start: formData.startDate,
+    travel_end: formData.endDate,
+    pax: formData.guestCount,
       };
       await createQuoteMutation.mutateAsync(apiData);
       // Reset form
@@ -49,8 +47,7 @@ export function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalProps) {
         clientPhone: '',
         startDate: '',
         endDate: '',
-        adults: 1,
-        children: 0,
+        guestCount: 1,
       });
       onClose();
     } catch (error) {
@@ -174,35 +171,19 @@ export function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalProps) {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="adults" className="text-sm font-medium text-gray-700">
-                    Adults *
-                  </label>
-                  <Input
-                    id="adults"
-                    name="adults"
-                    type="number"
-                    min="1"
-                    value={formData.adults}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="children" className="text-sm font-medium text-gray-700">
-                    Children
-                  </label>
-                  <Input
-                    id="children"
-                    name="children"
-                    type="number"
-                    min="0"
-                    value={formData.children}
-                    onChange={handleInputChange}
-                  />
-                </div>
+              <div className="space-y-2">
+                <label htmlFor="guestCount" className="text-sm font-medium text-gray-700">
+                  Number of Travelers *
+                </label>
+                <Input
+                  id="guestCount"
+                  name="guestCount"
+                  type="number"
+                  min="1"
+                  value={formData.guestCount}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
             </div>
 

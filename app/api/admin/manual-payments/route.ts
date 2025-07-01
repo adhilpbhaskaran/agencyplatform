@@ -5,13 +5,13 @@ import { Database } from '@/types/database';
 type PaymentWithQuote = Database['public']['Tables']['payments']['Row'] & {
   quotes: {
     id: string;
-    quote_number: string;
+    quote_ref: string;
     clients: {
-      full_name: string;
+      name: string;
       email: string;
     };
     agents: {
-      full_name: string;
+      name: string;
       email: string;
     };
   };
@@ -29,18 +29,18 @@ export async function GET(request: NextRequest) {
         quote_id,
         amount_idr,
         payment_method,
-        transaction_id,
+        gateway_transaction_id,
         proof_url,
         created_at,
         quotes!inner (
           id,
-          quote_number,
+          quote_ref,
           clients!inner (
-            full_name,
+            name,
             email
           ),
           agents!inner (
-            full_name,
+            name,
             email
           )
         )
@@ -63,12 +63,12 @@ export async function GET(request: NextRequest) {
       quote_id: payment.quote_id,
       amount_idr: payment.amount_idr,
       payment_method: payment.payment_method,
-      transaction_id: payment.transaction_id,
+      gateway_transaction_id: payment.gateway_transaction_id,
       proof_url: payment.proof_url,
       created_at: payment.created_at,
       quote: {
         id: (payment as any).quotes?.id,
-        quote_number: (payment as any).quotes?.quote_number,
+        quote_ref: (payment as any).quotes?.quote_ref,
         clients: (payment as any).quotes?.clients,
         agents: (payment as any).quotes?.agents
       }

@@ -3,13 +3,13 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { ArrowRight, CheckCircle, Star, Award, Users, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32 overflow-hidden">

@@ -7,37 +7,20 @@ interface QuotePDFTemplateProps {
   agent: {
     name: string;
     email: string;
-    phone?: string;
-    company_name?: string;
-    logo_url?: string;
+    phone: string | null;
+    company_name: string | null;
+    logo_url: string | null;
   };
   client: {
     name: string;
     email: string;
-    phone?: string;
+    phone: string | undefined;
   };
   settings: {
     show_agent_markup: boolean;
     show_bali_malayali_branding: boolean;
     cancellation_policy_snapshot?: string;
   };
-}
-
-interface DayPlan {
-  day_number: number;
-  location: string;
-  activities: string;
-  accommodation: string;
-  meals: string;
-  transportation: string;
-}
-
-interface QuoteOption {
-  option_type: 'hotel' | 'activity' | 'transport';
-  name: string;
-  description: string;
-  cost_per_person_idr: number;
-  is_selected: boolean;
 }
 
 const formatDate = (dateString: string) => {
@@ -63,10 +46,7 @@ export const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({
   client,
   settings
 }) => {
-  const selectedOptions = quote.quote_options?.filter(option => option.is_selected) || [];
-  const hotelOptions = selectedOptions.filter(option => option.option_type === 'hotel');
-  const activityOptions = selectedOptions.filter(option => option.option_type === 'activity');
-  const transportOptions = selectedOptions.filter(option => option.option_type === 'transport');
+  // Using new schema structure with quote_options for pricing
 
   return (
     <div className="max-w-4xl mx-auto bg-white text-gray-900 font-sans" style={{ fontSize: '14px', lineHeight: '1.5' }}>
@@ -115,7 +95,7 @@ export const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({
           )}
           <div>
             <p className="font-semibold text-gray-700">Number of Travelers:</p>
-            <p className="text-gray-900">{quote.adults + quote.children} people ({quote.adults} adults, {quote.children} children)</p>
+            <p className="text-gray-900">{quote.pax} people</p>
           </div>
         </div>
       </div>
@@ -126,52 +106,46 @@ export const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({
         <div className="grid grid-cols-2 gap-6">
           <div>
             <p className="font-semibold text-gray-700">Destination:</p>
-            <p className="text-gray-900 text-lg">Travel Dates</p>
+            <p className="text-gray-900 text-lg">Bali, Indonesia</p>
           </div>
           <div>
             <p className="font-semibold text-gray-700">Travel Dates:</p>
-            <p className="text-gray-900">{formatDate(quote.check_in_date)} - {formatDate(quote.check_out_date)}</p>
+            <p className="text-gray-900">{quote.travel_start && quote.travel_end ? `${formatDate(quote.travel_start)} - ${formatDate(quote.travel_end)}` : 'Dates TBD'}</p>
           </div>
         </div>
       </div>
 
       {/* Day-by-Day Itinerary */}
-      {quote.day_wise_plan && quote.day_wise_plan.length > 0 && (
+      {quote.quote_days && quote.quote_days.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-800 mb-4 border-b border-gray-300 pb-2">Day-by-Day Itinerary</h2>
           <div className="space-y-6">
-            {quote.day_wise_plan.map((day, index) => (
+            {quote.quote_days.map((day, index) => (
               <div key={index} className="border border-gray-200 rounded-lg p-4">
                 <h3 className="text-lg font-bold text-blue-600 mb-3">Day {day.day_number}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {day.location && (
+                  {day.day_date && (
                     <div>
-                      <p className="font-semibold text-gray-700">Location:</p>
-                      <p className="text-gray-900">{day.location}</p>
+                      <p className="font-semibold text-gray-700">Date:</p>
+                      <p className="text-gray-900">{new Date(day.day_date).toLocaleDateString()}</p>
                     </div>
                   )}
-                  {day.accommodation && (
+                  {day.region && (
                     <div>
-                      <p className="font-semibold text-gray-700">Accommodation:</p>
-                      <p className="text-gray-900">{day.accommodation}</p>
+                      <p className="font-semibold text-gray-700">Region:</p>
+                      <p className="text-gray-900">{day.region}</p>
                     </div>
                   )}
                   {day.activities && (
                     <div className="md:col-span-2">
                       <p className="font-semibold text-gray-700">Activities:</p>
-                      <p className="text-gray-900">{day.activities}</p>
+                      <p className="text-gray-900">{typeof day.activities === 'string' ? day.activities : JSON.stringify(day.activities)}</p>
                     </div>
                   )}
-                  {day.meals && (
-                    <div>
-                      <p className="font-semibold text-gray-700">Meals:</p>
-                      <p className="text-gray-900">{day.meals}</p>
-                    </div>
-                  )}
-                  {day.transportation && (
-                    <div>
-                      <p className="font-semibold text-gray-700">Transportation:</p>
-                      <p className="text-gray-900">{day.transportation}</p>
+                  {day.notes && (
+                    <div className="md:col-span-2">
+                      <p className="font-semibold text-gray-700">Notes:</p>
+                      <p className="text-gray-900">{day.notes}</p>
                     </div>
                   )}
                 </div>
@@ -181,73 +155,35 @@ export const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({
         </div>
       )}
 
-      {/* Hotel Options */}
-      {hotelOptions.length > 0 && (
+      {/* Quote Options */}
+      {quote.quote_options && quote.quote_options.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 border-b border-gray-300 pb-2">Selected Hotels</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-2 text-left">Hotel Name</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Description</th>
-                  <th className="border border-gray-300 px-4 py-2 text-right">Cost per Person</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hotelOptions.map((hotel, index) => (
-                  <tr key={index}>
-                    <td className="border border-gray-300 px-4 py-2 font-semibold">{hotel.name}</td>
-                    <td className="border border-gray-300 px-4 py-2">{hotel.description}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">{formatCurrency(hotel.cost_per_person_idr)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h2 className="text-xl font-bold text-gray-800 mb-4 border-b border-gray-300 pb-2">Pricing Options</h2>
+          <div className="space-y-4">
+            {quote.quote_options.map((option, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-600 mb-2">Option {option.option_number}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="font-semibold text-gray-700">Room Cost:</p>
+                    <p className="text-gray-900">{formatCurrency(option.room_cost_idr || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-700">Land Cost:</p>
+                    <p className="text-gray-900">{formatCurrency(option.land_cost_idr || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-700">Total Cost:</p>
+                    <p className="text-gray-900 text-lg font-bold">{formatCurrency(option.total_cost_idr || 0)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Activities & Transport */}
-      {(activityOptions.length > 0 || transportOptions.length > 0) && (
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 border-b border-gray-300 pb-2">Additional Services</h2>
-          
-          {activityOptions.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Activities</h3>
-              <div className="space-y-2">
-                {activityOptions.map((activity, index) => (
-                  <div key={index} className="flex justify-between items-center border-b border-gray-200 pb-2">
-                    <div>
-                      <p className="font-semibold">{activity.name}</p>
-                      <p className="text-sm text-gray-600">{activity.description}</p>
-                    </div>
-                    <p className="font-semibold">{formatCurrency(activity.cost_per_person_idr)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {transportOptions.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Transportation</h3>
-              <div className="space-y-2">
-                {transportOptions.map((transport, index) => (
-                  <div key={index} className="flex justify-between items-center border-b border-gray-200 pb-2">
-                    <div>
-                      <p className="font-semibold">{transport.name}</p>
-                      <p className="text-sm text-gray-600">{transport.description}</p>
-                    </div>
-                    <p className="font-semibold">{formatCurrency(transport.cost_per_person_idr)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Cost Breakdown */}
       <div className="mb-8">
@@ -256,16 +192,16 @@ export const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-700">Base Cost:</span>
-              <span className="font-semibold">{formatCurrency(quote.total_cost_idr)}</span>
+              <span className="font-semibold">{formatCurrency(quote.base_cost_idr || 0)}</span>
             </div>
             
-            {selectedOptions.length > 0 && (
+            {quote.quote_options && quote.quote_options.length > 0 && (
               <div className="border-t border-gray-300 pt-3">
-                <p className="text-sm text-gray-600 mb-2">Selected Options:</p>
-                {selectedOptions.map((option, index) => (
+                <p className="text-sm text-gray-600 mb-2">Available Options:</p>
+                {quote.quote_options.map((option, index) => (
                   <div key={index} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">• {option.name}</span>
-                    <span>{formatCurrency(option.cost_per_person_idr * (quote.adults + quote.children))}</span>
+                    <span className="text-gray-600">• Option {option.option_number}</span>
+                    <span>{formatCurrency(option.total_cost_idr || 0)}</span>
                   </div>
                 ))}
               </div>
@@ -274,9 +210,9 @@ export const QuotePDFTemplate: React.FC<QuotePDFTemplateProps> = ({
             <div className="border-t-2 border-gray-400 pt-3">
               <div className="flex justify-between items-center text-lg">
                 <span className="font-bold text-gray-800">Total Cost:</span>
-                <span className="font-bold text-blue-600 text-xl">IDR {quote.final_price_idr?.toLocaleString()}</span>
+                <span className="font-bold text-blue-600 text-xl">IDR {quote.final_total_idr?.toLocaleString() || '0'}</span>
               </div>
-              <p className="text-sm text-gray-600 mt-1">For {quote.adults + quote.children} travelers</p>
+              <p className="text-sm text-gray-600 mt-1">For {quote.pax} travelers</p>
             </div>
           </div>
         </div>

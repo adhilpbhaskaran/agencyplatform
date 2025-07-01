@@ -1,6 +1,7 @@
 // lib/supabase/server.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+// CORRECTED: The path to the auto-generated types file
 import { Database } from '@/types/database';
 
 export const createSupabaseServerClient = async () => {
@@ -13,6 +14,20 @@ export const createSupabaseServerClient = async () => {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            // This is a client-side method, so it can be ignored on the server
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: '', ...options });
+          } catch (error) {
+            // This is a client-side method, so it can be ignored on the server
+          }
         },
       },
     }

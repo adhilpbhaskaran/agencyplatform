@@ -17,24 +17,26 @@ import { useState, useEffect } from 'react';
 import { formatDate } from '@/lib/utils';
 import { useQuote, useUpdateQuote, useGeneratePDF, Quote } from '@/hooks/use-quotes';
 
-interface DayPlan {
+import { Database } from '@/types/database';
+
+type DayPlan = {
   id?: string;
   day_number: number;
-  location: string;
-  activities: string;
-  accommodation: string;
-  meals: string;
-  transportation: string;
-}
+  day_date: string;
+  region: 'mainland' | 'nusa_penida';
+  activities: string | null;
+  notes: string | null;
+  entry_fee_ids: string[] | null;
+};
 
-interface QuoteOption {
+type QuoteOption = {
   id?: string;
-  option_type: 'hotel' | 'activity' | 'transport';
-  name: string;
-  description: string;
-  cost_per_person_idr: number;
-  is_selected: boolean;
-}
+  option_number: number;
+  hotel_room_ids: string[] | null;
+  room_cost_idr: number | null;
+  land_cost_idr: number | null;
+  total_cost_idr: number | null;
+};
 
 export default function QuoteDetailPage() {
   const params = useParams();
@@ -59,21 +61,41 @@ export default function QuoteDetailPage() {
   // Initialize local state when quote data loads
   useEffect(() => {
     if (quote) {
-      setDayPlans(quote.day_wise_plan || []);
-      setQuoteOptions(quote.quote_options || []);
+      // Map database types to local types
+      const mappedDayPlans: DayPlan[] = (quote.quote_days || []).map(day => ({
+        id: day.id,
+        day_number: day.day_number,
+        day_date: day.day_date,
+        region: day.region as 'mainland' | 'nusa_penida',
+        activities: typeof day.activities === 'string' ? day.activities : day.activities ? JSON.stringify(day.activities) : null,
+        notes: day.notes,
+        entry_fee_ids: day.entry_fee_ids
+      }));
+      
+      const mappedQuoteOptions: QuoteOption[] = (quote.quote_options || []).map(option => ({
+        id: option.id,
+        option_number: option.option_number,
+        hotel_room_ids: option.hotel_room_ids,
+        room_cost_idr: option.room_cost_idr,
+        land_cost_idr: option.land_cost_idr,
+        total_cost_idr: option.total_cost_idr
+      }));
+      
+      setDayPlans(mappedDayPlans);
+      setQuoteOptions(mappedQuoteOptions);
     }
   }, [quote]);
 
   const addDayPlan = () => {
-    const newDay: DayPlan = {
+    const newDay: Partial<DayPlan> = {
       day_number: dayPlans.length + 1,
-      location: '',
-      activities: '',
-      accommodation: '',
-      meals: '',
-      transportation: ''
+      day_date: new Date().toISOString().split('T')[0],
+      region: 'mainland',
+      activities: null,
+      notes: null,
+      entry_fee_ids: null
     };
-    setDayPlans([...dayPlans, newDay]);
+    setDayPlans([...dayPlans, newDay as DayPlan]);
   };
 
   const removeDayPlan = (index: number) => {
@@ -86,15 +108,15 @@ export default function QuoteDetailPage() {
     setDayPlans(updated);
   };
 
-  const addQuoteOption = (type: 'hotel' | 'activity' | 'transport') => {
-    const newOption: QuoteOption = {
-      option_type: type,
-      name: '',
-      description: '',
-      cost_per_person_idr: 0,
-      is_selected: false
+  const addQuoteOption = () => {
+    const newOption: Partial<QuoteOption> = {
+      option_number: quoteOptions.length + 1,
+      room_cost_idr: 0,
+      land_cost_idr: 0,
+      total_cost_idr: 0,
+      hotel_room_ids: null
     };
-    setQuoteOptions([...quoteOptions, newOption]);
+    setQuoteOptions([...quoteOptions, newOption as QuoteOption]);
   };
 
   const removeQuoteOption = (index: number) => {
@@ -112,7 +134,7 @@ export default function QuoteDetailPage() {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
         data: {
-          day_wise_plan: dayPlans,
+          quote_days: dayPlans,
           quote_options: quoteOptions
         }
       });
@@ -153,9 +175,9 @@ export default function QuoteDetailPage() {
       const formData = new FormData();
       formData.append('amount', data.amount.toString());
       formData.append('payment_method', data.payment_method);
-      if (data.transaction_id) {
-        formData.append('transaction_id', data.transaction_id);
-      }
+      if (data.gateway_transaction_id) {
+      formData.append('transaction_id', data.gateway_transaction_id);
+    }
       if (data.notes) {
         formData.append('notes', data.notes);
       }
@@ -231,10 +253,10 @@ export default function QuoteDetailPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quote #{quote.id.slice(0, 8)}</h1>
-          <p className="text-gray-600 mt-1">{quote.clients?.full_name} • {quote.check_in_date} - {quote.check_out_date}</p>
+          <p className="text-gray-600 mt-1">{quote.clients?.name} • {quote.travel_start} - {quote.travel_end}</p>
         </div>
         <div className="flex items-center gap-4">
-          <Badge variant={quote.status === 'draft' ? 'secondary' : quote.status === 'sent' ? 'default' : quote.status === 'confirmed' ? 'default' : 'destructive'}>
+          <Badge variant={quote.status === 'draft' ? 'secondary' : quote.status === 'sent' ? 'default' : quote.status === 'approved' ? 'default' : 'destructive'}>
             {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
           </Badge>
           {quote.status === 'sent' && (
@@ -284,26 +306,26 @@ export default function QuoteDetailPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Client</label>
-                  <p className="text-gray-900">{quote.clients?.full_name}</p>
+                  <p className="text-gray-900">{quote.clients?.name}</p>
                 <p className="text-sm text-gray-600">{quote.clients?.email}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Travel Dates</label>
                   <p className="text-gray-900 flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {quote.check_in_date} - {quote.check_out_date}
+                    {quote.travel_start} - {quote.travel_end}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Travel Dates</label>
                   <p className="text-gray-900 flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    {formatDate(quote.check_in_date)} - {formatDate(quote.check_out_date)}
+                    {quote.travel_start && quote.travel_end ? `${formatDate(quote.travel_start)} - ${formatDate(quote.travel_end)}` : 'Dates TBD'}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Travelers</label>
-                  <p className="text-gray-900">{quote.adults + quote.children} people ({quote.adults} adults, {quote.children} children)</p>
+                  <p className="text-gray-900">{quote.pax} people</p>
                 </div>
               </div>
             </CardContent>
@@ -353,28 +375,31 @@ export default function QuoteDetailPage() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-700">Location</label>
+                          <label className="text-sm font-medium text-gray-700">Date</label>
                           {isEditing ? (
                             <Input 
-                              value={day.location}
-                              onChange={(e) => updateDayPlan(index, 'location', e.target.value)}
-                              placeholder="Enter location"
+                              type="date"
+                              value={day.day_date}
+                              onChange={(e) => updateDayPlan(index, 'day_date', e.target.value)}
                             />
                           ) : (
-                            <p className="text-gray-900">{day.location || 'Not specified'}</p>
+                            <p className="text-gray-900">{day.day_date}</p>
                           )}
                         </div>
                         
                         <div>
-                          <label className="text-sm font-medium text-gray-700">Accommodation</label>
+                          <label className="text-sm font-medium text-gray-700">Region</label>
                           {isEditing ? (
-                            <Input 
-                              value={day.accommodation}
-                              onChange={(e) => updateDayPlan(index, 'accommodation', e.target.value)}
-                              placeholder="Enter accommodation"
-                            />
+                            <select 
+                              value={day.region}
+                              onChange={(e) => updateDayPlan(index, 'region', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            >
+                              <option value="mainland">Mainland</option>
+                              <option value="nusa_penida">Nusa Penida</option>
+                            </select>
                           ) : (
-                            <p className="text-gray-900">{day.accommodation || 'Not specified'}</p>
+                            <p className="text-gray-900">{day.region === 'mainland' ? 'Mainland' : 'Nusa Penida'}</p>
                           )}
                         </div>
                         
@@ -382,7 +407,7 @@ export default function QuoteDetailPage() {
                           <label className="text-sm font-medium text-gray-700">Activities</label>
                           {isEditing ? (
                             <Textarea 
-                              value={day.activities}
+                              value={day.activities || ''}
                               onChange={(e) => updateDayPlan(index, 'activities', e.target.value)}
                               placeholder="Describe the day's activities"
                               rows={3}
@@ -392,29 +417,17 @@ export default function QuoteDetailPage() {
                           )}
                         </div>
                         
-                        <div>
-                          <label className="text-sm font-medium text-gray-700">Meals</label>
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium text-gray-700">Notes</label>
                           {isEditing ? (
-                            <Input 
-                              value={day.meals}
-                              onChange={(e) => updateDayPlan(index, 'meals', e.target.value)}
-                              placeholder="Meal arrangements"
+                            <Textarea 
+                              value={day.notes || ''}
+                              onChange={(e) => updateDayPlan(index, 'notes', e.target.value)}
+                              placeholder="Additional notes"
+                              rows={2}
                             />
                           ) : (
-                            <p className="text-gray-900">{day.meals || 'Not specified'}</p>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-gray-700">Transportation</label>
-                          {isEditing ? (
-                            <Input 
-                              value={day.transportation}
-                              onChange={(e) => updateDayPlan(index, 'transportation', e.target.value)}
-                              placeholder="Transportation details"
-                            />
-                          ) : (
-                            <p className="text-gray-900">{day.transportation || 'Not specified'}</p>
+                            <p className="text-gray-900">{day.notes || 'No notes'}</p>
                           )}
                         </div>
                       </div>
@@ -431,20 +444,10 @@ export default function QuoteDetailPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>Hotel & Service Options</CardTitle>
                 {isEditing && (
-                  <div className="flex gap-2">
-                    <Button onClick={() => addQuoteOption('hotel')} size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Hotel
-                    </Button>
-                    <Button onClick={() => addQuoteOption('activity')} size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Activity
-                    </Button>
-                    <Button onClick={() => addQuoteOption('transport')} size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Transport
-                    </Button>
-                  </div>
+                  <Button onClick={() => addQuoteOption()} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Option
+                  </Button>
                 )}
               </div>
             </CardHeader>
@@ -459,7 +462,7 @@ export default function QuoteDetailPage() {
                   {quoteOptions.map((option, index) => (
                     <div key={index} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
-                        <Badge variant="outline">{option.option_type}</Badge>
+                        <Badge variant="outline">Option #{option.option_number}</Badge>
                         {isEditing && (
                           <Button 
                             onClick={() => removeQuoteOption(index)} 
@@ -471,45 +474,46 @@ export default function QuoteDetailPage() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-700">Name</label>
-                          {isEditing ? (
-                            <Input 
-                              value={option.name}
-                              onChange={(e) => updateQuoteOption(index, 'name', e.target.value)}
-                              placeholder="Option name"
-                            />
-                          ) : (
-                            <p className="text-gray-900">{option.name || 'Unnamed option'}</p>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-gray-700">Cost per Person (IDR)</label>
+                          <label className="text-sm font-medium text-gray-700">Room Cost (IDR)</label>
                           {isEditing ? (
                             <Input 
                               type="number"
-                              value={option.cost_per_person_idr}
-                              onChange={(e) => updateQuoteOption(index, 'cost_per_person_idr', parseInt(e.target.value) || 0)}
+                              value={option.room_cost_idr || 0}
+                              onChange={(e) => updateQuoteOption(index, 'room_cost_idr', parseInt(e.target.value) || 0)}
                               placeholder="0"
                             />
                           ) : (
-                            <p className="text-gray-900">IDR {option.cost_per_person_idr.toLocaleString()}</p>
+                            <p className="text-gray-900">IDR {(option.room_cost_idr || 0).toLocaleString()}</p>
                           )}
                         </div>
                         
-                        <div className="md:col-span-2">
-                          <label className="text-sm font-medium text-gray-700">Description</label>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Land Cost (IDR)</label>
                           {isEditing ? (
-                            <Textarea 
-                              value={option.description}
-                              onChange={(e) => updateQuoteOption(index, 'description', e.target.value)}
-                              placeholder="Describe this option"
-                              rows={2}
+                            <Input 
+                              type="number"
+                              value={option.land_cost_idr || 0}
+                              onChange={(e) => updateQuoteOption(index, 'land_cost_idr', parseInt(e.target.value) || 0)}
+                              placeholder="0"
                             />
                           ) : (
-                            <p className="text-gray-900">{option.description || 'No description'}</p>
+                            <p className="text-gray-900">IDR {(option.land_cost_idr || 0).toLocaleString()}</p>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Total Cost (IDR)</label>
+                          {isEditing ? (
+                            <Input 
+                              type="number"
+                              value={option.total_cost_idr || 0}
+                              onChange={(e) => updateQuoteOption(index, 'total_cost_idr', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                          ) : (
+                            <p className="text-gray-900">IDR {(option.total_cost_idr || 0).toLocaleString()}</p>
                           )}
                         </div>
                       </div>
@@ -534,19 +538,19 @@ export default function QuoteDetailPage() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Base Cost:</span>
-                  <span className="font-medium">IDR {quote.total_cost_idr?.toLocaleString() || '0'}</span>
+                  <span className="font-medium">IDR {quote.base_cost_idr?.toLocaleString() || '0'}</span>
                 </div>
                 
                 <Separator />
                 
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total:</span>
-                  <span className="text-green-600">IDR {quote.final_price_idr?.toLocaleString() || '0'}</span>
+                  <span className="text-green-600">IDR {quote.final_total_idr?.toLocaleString() || '0'}</span>
                 </div>
                 
                 <div className="text-sm text-gray-500">
-                  <p>For {quote.adults + quote.children} travelers</p>
-                  <p>Created {formatDate(quote.created_at)}</p>
+                  <p>For {quote.pax} travelers</p>
+                  <p>Created {quote.created_at ? formatDate(quote.created_at) : 'N/A'}</p>
                 </div>
               </div>
               
@@ -584,7 +588,7 @@ export default function QuoteDetailPage() {
             <PDFActions
               pdfUrl={generatedPDF.pdf_url}
               filename={generatedPDF.filename}
-              clientEmail={quote.clients?.email}
+              clientEmail={quote.clients?.email || undefined}
               onClose={() => {
                 setShowPDFActions(false);
                 setGeneratedPDF(null);

@@ -1,16 +1,14 @@
-import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { auth } from '@clerk/nextjs/server'
 
-// Import components with SSR disabled to prevent hydration issues
+// Import components dynamically
 const SidebarNoSSR = dynamic(
-  () => import('@/components/dashboard/sidebar-client').then(mod => ({ default: mod.SidebarClient })),
-  { ssr: false }
+  () => import('@/components/dashboard/sidebar-client').then(mod => ({ default: mod.SidebarClient }))
 )
 
 const HeaderNoSSR = dynamic(
-  () => import('@/components/dashboard/header-client').then(mod => ({ default: mod.HeaderClient })),
-  { ssr: false }
+  () => import('@/components/dashboard/header-client').then(mod => ({ default: mod.HeaderClient }))
 )
 
 export default async function DashboardLayout({
@@ -23,6 +21,8 @@ export default async function DashboardLayout({
   if (!userId) {
     redirect('/')
   }
+
+  // Registration and approval checks are now handled in middleware.ts
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowRight, Sparkles, Users, TrendingUp, Globe, MessageSquare, CreditCard, BookOpen, Play, Star } from 'lucide-react'
 import Link from 'next/link'
-import OnboardingFlow from './onboarding-flow'
 
 interface EmptyStateProps {
   userName?: string
@@ -123,8 +122,7 @@ export default function EmptyState({ userName = 'Travel Agent' }: EmptyStateProp
         </div>
       </div>
 
-      {/* Onboarding Flow */}
-      <OnboardingFlow />
+
 
       {/* Key Features Preview */}
       <div>

@@ -12,18 +12,18 @@ interface PendingPayment {
   quote_id: string;
   amount_idr: number;
   payment_method: string;
-  transaction_id: string | null;
+  gateway_transaction_id: string | null;
   proof_url: string | null;
   created_at: string;
   quote: {
     id: string;
-    quote_number: string;
+    quote_ref: string;
     clients: {
-      full_name: string;
+      name: string;
       email: string;
     };
     agents: {
-      full_name: string;
+      name: string;
       email: string;
     };
   };
@@ -167,7 +167,7 @@ export default function ManualPaymentsPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Amount:</span>
                         <span className="font-medium">
-                          IDR {payment.amount_idr.toLocaleString()}
+                          IDR {(payment.amount_idr || 0).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -176,11 +176,11 @@ export default function ManualPaymentsPage() {
                           {payment.payment_method.replace('_', ' ')}
                         </span>
                       </div>
-                      {payment.transaction_id && (
+                      {payment.gateway_transaction_id && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Transaction ID:</span>
                           <span className="font-mono text-xs">
-                            {payment.transaction_id}
+                            {payment.gateway_transaction_id}
                           </span>
                         </div>
                       )}
@@ -198,16 +198,16 @@ export default function ManualPaymentsPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Quote #:</span>
                         <span className="font-medium">
-                          {payment.quote.quote_number}
+                          {payment.quote.quote_ref}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Client:</span>
-                        <span>{payment.quote.clients.full_name}</span>
+                        <span>{payment.quote.clients.name}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Agent:</span>
-                        <span>{payment.quote.agents.full_name}</span>
+                        <span>{payment.quote.agents.name}</span>
                       </div>
                     </div>
                   </div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
 export default function PlatformPage() {
   const features = [
     {
@@ -86,6 +87,7 @@ export default function PlatformPage() {
 
   return (
     <div className="min-h-screen bg-background">
+
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32 overflow-hidden">
         <img

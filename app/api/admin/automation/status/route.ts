@@ -5,22 +5,11 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
 
-    // Get automation status from the view
-    const { data: status, error } = await supabase
-      .from('automation_status')
-      .select('*');
-
-    if (error) {
-      console.error('Error fetching automation status:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch automation status' },
-        { status: 500 }
-      );
-    }
-
+    // TODO: automation_status table/view doesn't exist in database schema
+    // This needs to be implemented or removed
     return NextResponse.json({
       success: true,
-      status: status || []
+      status: []
     });
   } catch (error) {
     console.error('Error in automation status API:', error);

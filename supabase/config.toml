@@ -1,6 +1,6 @@
 # A string used to distinguish different Supabase projects on the same machine.
 # Not particularly relevant if you only have one project.
-project_id = "bali-malayali-b2b-platform"
+project_id = "agencyplatform"
 
 [api]
 enabled = true
@@ -35,21 +35,13 @@ site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = true
-enable_email_confirmations = false
-enable_sms_confirmations = false
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
-[edge_functions]
-enabled = true
 
-# Use pre-defined map of edge function name to import map.
-[edge_functions.inspector]
-enabled = true
-port = 54327
 
 # Configure one of the supported object storage backends to store the above files.
 [storage.buckets.quotes-pdf]
@@ -61,3 +53,6 @@ allowed_mime_types = ["application/pdf"]
 public = true
 file_size_limit = "2MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+
+[analytics]
+enabled = false

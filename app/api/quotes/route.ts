@@ -6,15 +6,8 @@ import { Database } from '@/types/database';
 type Quote = Database['public']['Tables']['quotes']['Row'];
 type QuoteWithRelations = Quote & {
   clients: Database['public']['Tables']['clients']['Row']
-  quote_hotels: (Database['public']['Tables']['quote_hotels']['Row'] & {
-    hotels: Database['public']['Tables']['hotels']['Row']
-    hotel_rooms: Database['public']['Tables']['hotel_rooms']['Row']
-  })[]
-  quote_transport: (Database['public']['Tables']['quote_transport']['Row'] & {
-    transport_services: Database['public']['Tables']['transport_services']['Row'] & {
-      transport_providers: Database['public']['Tables']['transport_providers']['Row']
-    }
-  })[]
+  quote_days: Database['public']['Tables']['quote_days']['Row'][]
+  quote_options: Database['public']['Tables']['quote_options']['Row'][]
 }
 
 export async function GET(request: NextRequest) {
@@ -45,54 +38,32 @@ export async function GET(request: NextRequest) {
         *,
         clients (
           id,
-          full_name,
+          name,
           email,
-          phone,
-          nationality
+          phone
         ),
-        quote_hotels (
+        quote_days (
           id,
-          hotel_id,
-          room_id,
-          nights,
-          rooms,
-          rate_per_night_idr,
-          total_cost_idr,
-          hotels (
-            id,
-            name,
-            location,
-            star_rating
-          ),
-          hotel_rooms (
-            id,
-            room_type,
-            max_occupancy
-          )
+          day_number,
+          day_date,
+          region,
+          activities,
+          notes
         ),
-        quote_transport (
+        quote_options (
           id,
-          transport_id,
-          quantity,
-          unit_price_idr,
-          total_cost_idr,
-          transport_services (
-            id,
-            transport_type,
-            vehicle_type,
-            description,
-            transport_providers (
-              id,
-              name
-            )
-          )
+          option_number,
+          hotel_room_ids,
+          room_cost_idr,
+          land_cost_idr,
+          total_cost_idr
         )
       `)
       .eq('clerk_id', userId);
 
     // Apply status filter if provided
     if (status && status !== 'all') {
-      query = query.eq('status', status);
+      query = query.eq('status', status as Database['public']['Enums']['quote_status']);
     }
 
     // Apply sorting
@@ -151,23 +122,22 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      client_name,
-      client_email,
-      client_phone,
-      client_nationality,
-      check_in_date,
-      check_out_date,
-      adults,
-      children,
+    client_name,
+    client_email,
+    client_phone,
+    client_nationality,
+    travel_start,
+    travel_end,
+      pax,
       currency_display,
       agent_margin_percentage,
-      hotels,
-      transport,
+      quote_days,
+      quote_options,
       notes
     } = body;
 
     // Validate required fields
-    if (!client_name || !client_email || !check_in_date || !check_out_date || !adults) {
+    if (!client_name || !client_email || !travel_start || !travel_end || !pax) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -206,10 +176,8 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('clients')
         .update({
-          full_name: client_name,
-          phone: client_phone || null,
-          nationality: client_nationality || null,
-          updated_at: new Date().toISOString()
+          name: client_name,
+          phone: client_phone || null
         })
         .eq('id', clientId);
     } else {
@@ -217,10 +185,9 @@ export async function POST(request: NextRequest) {
       const { data: newClient, error: clientError } = await supabase
         .from('clients')
         .insert({
-          full_name: client_name,
+          name: client_name,
           email: client_email,
           phone: client_phone || null,
-          nationality: client_nationality || null,
           agent_id: agent.id
         })
         .select('id')
@@ -244,30 +211,43 @@ export async function POST(request: NextRequest) {
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
       .insert({
-        quote_number: quoteNumber,
+        quote_ref: quoteNumber,
         agent_id: agent.id,
         clerk_id: userId,
         client_id: clientId,
-        check_in_date,
-        check_out_date,
-        adults: parseInt(adults.toString()),
-        children: parseInt((children || 0).toString()),
-        currency_display: currency_display || 'USD',
-        agent_margin_percentage: agent_margin_percentage || 15,
+        travel_start,
+    travel_end,
+        pax: parseInt(pax.toString()),
+        display_currency: currency_display || 'USD',
         status: 'draft',
-        notes,
-        total_cost_idr: 0,
-        final_price_idr: 0,
-        exchange_rate: 1
+        base_cost_idr: 0,
+        markup_idr: 0,
+        final_total_idr: 0,
+        exchange_rate_used: 1
       })
       .select(`
         *,
         clients (
           id,
-          full_name,
+          name,
           email,
-          phone,
-          nationality
+          phone
+        ),
+        quote_days (
+          id,
+          day_number,
+          day_date,
+          region,
+          activities,
+          notes
+        ),
+        quote_options (
+          id,
+          option_number,
+          hotel_room_ids,
+          room_cost_idr,
+          land_cost_idr,
+          total_cost_idr
         )
       `)
       .single();
@@ -280,53 +260,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add hotels if provided
-    if (hotels && hotels.length > 0) {
-      const hotelInserts = hotels.map((hotel: any) => ({
+    // Add quote days if provided
+    if (quote_days && quote_days.length > 0) {
+      const dayInserts = quote_days.map((day: any) => ({
         quote_id: quote.id,
-        hotel_id: hotel.hotel_id,
-        room_id: hotel.room_id,
-        nights: hotel.nights,
-        rooms: hotel.rooms,
-        rate_per_night_idr: hotel.rate_per_night_idr,
-        total_cost_idr: hotel.total_cost_idr
+        day_number: day.day_number,
+        day_date: day.day_date,
+        region: day.region,
+        activities: day.activities,
+        notes: day.notes
       }));
 
-      const { error: hotelError } = await supabase
-        .from('quote_hotels')
-        .insert(hotelInserts);
+      const { error: dayError } = await supabase
+        .from('quote_days')
+        .insert(dayInserts);
 
-      if (hotelError) {
-        console.error('Error adding hotels to quote:', hotelError);
+      if (dayError) {
+        console.error('Error adding days to quote:', dayError);
         // Rollback quote creation
         await supabase.from('quotes').delete().eq('id', quote.id);
         return NextResponse.json(
-          { error: 'Failed to add hotels to quote' },
+          { error: 'Failed to add days to quote' },
           { status: 500 }
         );
       }
     }
 
-    // Add transport if provided
-    if (transport && transport.length > 0) {
-      const transportInserts = transport.map((t: any) => ({
+    // Add quote options if provided
+    if (quote_options && quote_options.length > 0) {
+      const optionInserts = quote_options.map((option: any) => ({
         quote_id: quote.id,
-        transport_id: t.transport_id,
-        quantity: t.quantity,
-        unit_price_idr: t.unit_price_idr,
-        total_cost_idr: t.total_cost_idr
+        option_number: option.option_number,
+        hotel_room_ids: option.hotel_room_ids,
+        room_cost_idr: option.room_cost_idr,
+        land_cost_idr: option.land_cost_idr,
+        total_cost_idr: option.total_cost_idr
       }));
 
-      const { error: transportError } = await supabase
-        .from('quote_transport')
-        .insert(transportInserts);
+      const { error: optionError } = await supabase
+        .from('quote_options')
+        .insert(optionInserts);
 
-      if (transportError) {
-        console.error('Error adding transport to quote:', transportError);
+      if (optionError) {
+        console.error('Error adding options to quote:', optionError);
         // Rollback quote creation
         await supabase.from('quotes').delete().eq('id', quote.id);
         return NextResponse.json(
-          { error: 'Failed to add transport to quote' },
+          { error: 'Failed to add options to quote' },
           { status: 500 }
         );
       }
@@ -334,36 +314,31 @@ export async function POST(request: NextRequest) {
 
     // Calculate total cost using the database function if available
     try {
-      const { data: totalCost, error: costError } = await supabase
-        .rpc('calculate_quote_cost', { quote_id: quote.id });
+      const { data: costResult, error: costError } = await supabase
+        .rpc('update_quote_currency', { p_quote_id: quote.id });
 
-      if (!costError && totalCost) {
-        // Update quote with calculated costs
-        const { data: updatedQuote, error: updateError } = await supabase
+      if (!costError) {
+        // Fetch updated quote
+        const { data: updatedQuote, error: fetchError } = await supabase
           .from('quotes')
-          .update({
-            total_cost_idr: totalCost,
-            final_price_idr: Math.round(totalCost * (1 + (agent_margin_percentage || 15) / 100))
-          })
-          .eq('id', quote.id)
           .select(`
             *,
             clients (
               id,
-              full_name,
+              name,
               email,
-              phone,
-              nationality
+              phone
             )
           `)
+          .eq('id', quote.id)
           .single();
 
-        if (!updateError && updatedQuote) {
+        if (!fetchError && updatedQuote) {
           return NextResponse.json({ quote: updatedQuote }, { status: 201 });
         }
       }
     } catch (error) {
-      console.error('Error calculating quote cost:', error);
+      console.error('Error updating quote currency:', error);
     }
 
     return NextResponse.json({ quote }, { status: 201 });

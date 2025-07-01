@@ -14,14 +14,15 @@ export async function POST(
     
     // Parse form data
     const formData = await request.formData();
-    const amount = parseInt(formData.get('amount') as string);
+    const amountStr = formData.get('amount') as string;
+    const amount = parseInt(amountStr);
     const paymentMethod = formData.get('payment_method') as string;
     const transactionId = formData.get('transaction_id') as string;
     const notes = formData.get('notes') as string;
     const proofFile = formData.get('proof_file') as File;
     
     // Validate required fields
-    if (!amount || amount <= 0) {
+    if (!amountStr || isNaN(amount) || amount <= 0) {
       return NextResponse.json(
         { error: 'Valid amount is required' },
         { status: 400 }
@@ -99,11 +100,16 @@ export async function POST(
     // Create payment record
     const paymentData: Payment = {
       quote_id: quoteId,
+      agent_id: quote.agent_id,
+      amount_paid: amount,
+      currency_paid: 'IDR',
       amount_idr: amount,
-      payment_method: paymentMethod as Database['public']['Enums']['payment_method'],
+      fx_rate_used: 1,
+      payment_gateway: 'manual',
+      gateway_transaction_id: transactionId || null,
       status: 'pending',
-      transaction_id: transactionId || null,
       is_manual: true,
+      payment_method: paymentMethod,
       proof_url: urlData.publicUrl,
       verified_by: null,
       verified_at: null
@@ -144,14 +150,14 @@ export async function POST(
         agent_id: quote.agent_id,
         type: 'payment_received',
         title: 'Manual Payment Recorded',
-        message: `Manual payment of IDR ${amount.toLocaleString()} recorded for Quote #${quote.quote_number}. Awaiting verification.`,
+        message: `Manual payment of IDR ${amount.toLocaleString()} recorded for Quote #${quote.quote_ref}. Awaiting verification.`,
         read: false,
         metadata: {
           quote_id: quoteId,
           payment_id: payment.id,
           amount: amount,
           payment_method: paymentMethod
-        }
+        } as any
       });
     
     if (notificationError) {

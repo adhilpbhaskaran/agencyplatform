@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowRight, Mail, Phone, MapPin, Clock, MessageCircle, Users, HelpCircle } from 'lucide-react'
+import { Mail, Phone, MapPin, Clock, MessageSquare, MessageCircle, Users, Globe, Star, ArrowRight, CheckCircle, Send, Calendar, Award, Shield, Zap, HeadphonesIcon, FileText, Video, Coffee, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
 import Footer from '@/components/footer'
 
 export default function ContactPage() {
@@ -54,7 +54,6 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32 overflow-hidden">

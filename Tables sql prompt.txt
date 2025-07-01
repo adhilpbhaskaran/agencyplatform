@@ -1,0 +1,365 @@
+-- =================================================================
+-- BALI MALAYALI B2B PLATFORM - FINAL & COMPLETE DATABASE SCHEMA
+-- This script contains all tables, types, and structures from all 12 modules.
+-- =================================================================
+
+-- PART 1: CUSTOM TYPE DEFINITIONS
+-- All ENUM types required by the platform.
+-- =================================================================
+
+CREATE TYPE user_type AS ENUM ('travel_agent', 'freelancer', 'affiliate');
+CREATE TYPE agent_tier AS ENUM ('bronze', 'silver', 'gold');
+CREATE TYPE quote_status AS ENUM ('draft', 'sent', 'revised', 'approved', 'paid', 'expired', 'void', 'on_hold_external_issue');
+CREATE TYPE trip_status AS ENUM ('pending', 'completed', 'cancelled');
+CREATE TYPE pricing_season AS ENUM ('low', 'high', 'peak');
+CREATE TYPE travel_region AS ENUM ('mainland', 'nusa_penida');
+CREATE TYPE dispute_status AS ENUM ('open', 'investigating', 'resolved_refund', 'resolved_credit', 'rejected');
+
+
+-- =================================================================
+-- PART 2: CORE TABLES
+-- All tables required for the platform's functionality.
+-- =================================================================
+
+-- From Module 2: settings
+CREATE TABLE settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL UNIQUE,
+  value TEXT NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 11: cancellation_policies (created first due to dependencies)
+CREATE TABLE cancellation_policies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    is_default BOOLEAN NOT NULL DEFAULT false
+);
+
+-- From Module 11: cancellation_policy_rules
+CREATE TABLE cancellation_policy_rules (
+    id BIGSERIAL PRIMARY KEY,
+    policy_id UUID NOT NULL REFERENCES cancellation_policies(id) ON DELETE CASCADE,
+    days_before_arrival INT NOT NULL,
+    refund_percentage NUMERIC NOT NULL CHECK (refund_percentage >= 0 AND refund_percentage <= 100),
+    notes TEXT,
+    UNIQUE(policy_id, days_before_arrival)
+);
+
+-- From Module 9: admins
+CREATE TABLE admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_id TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'support_lead'
+);
+
+-- From Module 2 & 12: agents (with is_approved field)
+CREATE TABLE agents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_id TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  tier agent_tier NOT NULL DEFAULT 'bronze',
+  type user_type NOT NULL DEFAULT 'travel_agent',
+  logo_url TEXT,
+  referred_by_agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
+  is_approved BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 2: clients
+CREATE TABLE clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  name TEXT,
+  email TEXT,
+  phone TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 2 & 11: hotels (with cancellation_policy_id)
+CREATE TABLE hotels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  city TEXT NOT NULL,
+  cancellation_policy_id UUID REFERENCES cancellation_policies(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 2: hotel_rooms
+CREATE TABLE hotel_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hotel_id UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  max_capacity INT NOT NULL DEFAULT 2,
+  allow_triple BOOLEAN NOT NULL DEFAULT false,
+  allow_child BOOLEAN NOT NULL DEFAULT true,
+  base_price_idr NUMERIC NOT NULL CHECK (base_price_idr >= 0),
+  extra_adult_price_idr NUMERIC CHECK (extra_adult_price_idr >= 0),
+  child_price_idr NUMERIC CHECK (child_price_idr >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 2: seasonal_rates
+CREATE TABLE seasonal_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hotel_room_id UUID NOT NULL REFERENCES hotel_rooms(id) ON DELETE CASCADE,
+  season pricing_season NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  rate_idr NUMERIC NOT NULL CHECK (rate_idr >= 0),
+  CONSTRAINT unique_season_per_room_per_period UNIQUE (hotel_room_id, start_date, end_date)
+);
+
+-- From Module 2 & 11: activities (with cancellation_policy_id)
+CREATE TABLE activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  location TEXT,
+  price_idr NUMERIC NOT NULL CHECK (price_idr >= 0),
+  cancellation_policy_id UUID REFERENCES cancellation_policies(id) ON DELETE SET NULL
+);
+
+-- From Module 2: entry_fees
+CREATE TABLE entry_fees (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location TEXT NOT NULL UNIQUE,
+  price_idr NUMERIC NOT NULL CHECK (price_idr >= 0)
+);
+
+-- From Module 2: transport_rates
+CREATE TABLE transport_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  region travel_region NOT NULL,
+  pax_limit INT NOT NULL,
+  vehicle_type TEXT NOT NULL,
+  rate_per_day_idr NUMERIC NOT NULL CHECK (rate_per_day_idr >= 0),
+  UNIQUE(region, pax_limit)
+);
+
+-- From Module 2, 9, 10, 11: quotes (with all amendments)
+CREATE TABLE quotes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  clerk_id TEXT,
+  client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+  pax INT NOT NULL CHECK (pax > 0),
+  children INT DEFAULT 0,
+  travel_start DATE NOT NULL,
+  travel_end DATE NOT NULL,
+  base_cost_idr NUMERIC,
+  markup_idr NUMERIC DEFAULT 0,
+  final_total_idr NUMERIC,
+  quote_ref TEXT UNIQUE,
+  status quote_status NOT NULL DEFAULT 'draft',
+  trip_status trip_status NOT NULL DEFAULT 'pending',
+  pdf_url TEXT,
+  expires_at TIMESTAMPTZ,
+  display_currency TEXT NOT NULL DEFAULT 'USD',
+  exchange_rate_used NUMERIC,
+  display_final_total NUMERIC,
+  cancellation_policy_snapshot JSONB,
+  is_archived BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+
+-- From Module 9: quote_versions
+CREATE TABLE quote_versions (
+  id BIGSERIAL PRIMARY KEY,
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  version_number INT NOT NULL DEFAULT 1,
+  pdf_url TEXT,
+  changes_summary TEXT,
+  created_by_user_id UUID REFERENCES agents(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(quote_id, version_number)
+);
+
+-- From Module 2: quote_options
+CREATE TABLE quote_options (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  option_number INT NOT NULL CHECK (option_number IN (1, 2, 3)),
+  hotel_room_ids UUID[],
+  room_cost_idr NUMERIC,
+  land_cost_idr NUMERIC,
+  total_cost_idr NUMERIC,
+  UNIQUE(quote_id, option_number)
+);
+
+-- From Module 2: quote_days
+CREATE TABLE quote_days (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  day_number INT NOT NULL,
+  day_date DATE NOT NULL,
+  region travel_region NOT NULL,
+  notes TEXT,
+  activities JSONB,
+  entry_fee_ids UUID[],
+  UNIQUE(quote_id, day_number)
+);
+
+-- From Module 2 & 12: payments (with manual payment fields)
+CREATE TABLE payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE RESTRICT,
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE RESTRICT,
+  amount_paid NUMERIC NOT NULL,
+  currency_paid TEXT NOT NULL,
+  amount_idr NUMERIC,
+  payment_gateway TEXT,
+  gateway_transaction_id TEXT,
+  status TEXT,
+  fx_rate_used NUMERIC,
+  tax_details JSONB,
+  is_manual BOOLEAN NOT NULL DEFAULT false,
+  payment_method TEXT,
+  proof_url TEXT,
+  verified_by UUID REFERENCES admins(id) ON DELETE SET NULL,
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 2: commissions
+CREATE TABLE commissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  originating_agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'INR',
+  status TEXT CHECK (status IN ('pending', 'approved', 'paid', 'void')) DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 3: exchange_rates (with final corrected schema)
+CREATE TABLE exchange_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  currency_code TEXT NOT NULL UNIQUE,
+  rate_to_idr NUMERIC NOT NULL,
+  source TEXT,
+  last_updated TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 3: quote_status_history
+CREATE TABLE quote_status_history (
+  id BIGSERIAL PRIMARY KEY,
+  quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  status_from quote_status,
+  status_to quote_status NOT NULL,
+  changed_by_user_id UUID,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 3: support_tickets
+CREATE TABLE support_tickets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID NOT NULL REFERENCES agents(id),
+  quote_id UUID REFERENCES quotes(id),
+  subject TEXT NOT NULL,
+  description TEXT,
+  status TEXT CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')) DEFAULT 'open',
+  priority TEXT CHECK (priority IN ('low', 'medium', 'high', 'urgent')) DEFAULT 'medium',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 9: disputes
+CREATE TABLE disputes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES quotes(id),
+  support_ticket_id UUID REFERENCES support_tickets(id),
+  agent_id UUID NOT NULL REFERENCES agents(id),
+  reason TEXT NOT NULL,
+  status dispute_status NOT NULL DEFAULT 'open',
+  resolution_details TEXT,
+  refund_amount_idr NUMERIC,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
+
+-- From Module 3: inventory_snapshots
+CREATE TABLE inventory_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_type TEXT NOT NULL,
+  vendor_id UUID NOT NULL,
+  snapshot_date DATE NOT NULL,
+  available_units INT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 9: notifications
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID REFERENCES quotes(id),
+  type TEXT,
+  title TEXT,
+  message TEXT NOT NULL,
+  target_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 9: agent_notifications
+CREATE TABLE agent_notifications (
+  id BIGSERIAL PRIMARY KEY,
+  notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  read_at TIMESTAMPTZ
+);
+
+-- From Module 3: logs
+CREATE TABLE logs (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID,
+  action TEXT NOT NULL,
+  object_type TEXT,
+  object_id UUID,
+  changes JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- From Module 12: quote_funnel_events
+CREATE TABLE quote_funnel_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID REFERENCES quotes(id),
+  agent_id UUID REFERENCES agents(id),
+  event_type TEXT CHECK (event_type IN ('created', 'sent_to_client', 'client_viewed', 'revised', 'finalized', 'paid')),
+  metadata JSONB,
+  occurred_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- From Module 12: retry_queue
+CREATE TABLE retry_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_type TEXT CHECK (job_type IN ('pdf_generation', 'fx_fetch', 'email_send')),
+  reference_id UUID,
+  payload JSONB,
+  attempts INT DEFAULT 0,
+  max_attempts INT DEFAULT 3,
+  status TEXT CHECK (status IN ('pending', 'in_progress', 'failed', 'succeeded')) DEFAULT 'pending',
+  error_log TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  last_attempt_at TIMESTAMPTZ
+);
+
+-- From Module 9: asset_gallery
+CREATE TABLE asset_gallery (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_url TEXT NOT NULL,
+  alt_text TEXT,
+  entity_type TEXT NOT NULL,
+  related_entity_id UUID NOT NULL,
+  display_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Add index for asset gallery
+CREATE INDEX idx_asset_gallery_entity ON asset_gallery(entity_type, related_entity_id);

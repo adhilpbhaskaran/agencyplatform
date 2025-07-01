@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+
 import { useState } from 'react'
 
 export default function PartnerWithUsPage() {
@@ -60,6 +61,7 @@ export default function PartnerWithUsPage() {
 
   return (
     <div className="min-h-screen bg-background">
+
       {/* Header */}
       <div className="relative border-b border-border overflow-hidden">
         <img

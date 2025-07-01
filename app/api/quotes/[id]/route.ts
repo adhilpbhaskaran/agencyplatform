@@ -31,8 +31,8 @@ export async function GET(
       .from('quotes')
       .select(`
         *,
-        clients (*),
-        day_wise_plan (*),
+        clients (id, name, email, phone),
+        quote_days (*),
         quote_options (*)
       `)
       .eq('id', params.id)
@@ -46,30 +46,27 @@ export async function GET(
     // Transform the data to match our interface
     const transformedQuote = {
       id: quote.id,
-      quote_number: quote.quote_number,
+      quote_ref: quote.quote_ref,
       agent_id: quote.agent_id,
       clerk_id: quote.clerk_id,
       client_id: quote.client_id,
       client_name: quote.clients?.name || '',
       client_email: quote.clients?.email || '',
       status: quote.status,
-      check_in_date: quote.check_in_date,
-      check_out_date: quote.check_out_date,
-      adults: quote.adults,
-      children: quote.children,
-      total_cost_idr: quote.total_cost_idr || 0,
-      agent_margin_percentage: quote.agent_margin_percentage || 0,
-      final_price_idr: quote.final_price_idr || 0,
-      currency_display: quote.currency_display || 'IDR',
-      exchange_rate: quote.exchange_rate || 1,
-      price_locked_at: quote.price_locked_at,
+      travel_start: quote.travel_start,
+      travel_end: quote.travel_end,
+      pax: quote.pax,
+      base_cost_idr: quote.base_cost_idr || 0,
+      markup_idr: quote.markup_idr || 0,
+      final_total_idr: quote.final_total_idr || 0,
+      display_currency: quote.display_currency || 'IDR',
+      exchange_rate_used: quote.exchange_rate_used || 1,
+      display_final_total: quote.display_final_total || 0,
       expires_at: quote.expires_at,
-      expired: quote.expired || false,
       pdf_url: quote.pdf_url || null,
-      notes: quote.notes,
       created_at: quote.created_at,
       updated_at: quote.updated_at,
-      day_wise_plan: quote.day_wise_plan || [],
+      quote_days: quote.quote_days || [],
       quote_options: quote.quote_options || []
     };
 
@@ -95,7 +92,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { day_wise_plan, quote_options } = body;
+    const { quote_days, quote_options } = body;
 
     const supabase = await createSupabaseServerClient();
     
@@ -124,7 +121,7 @@ export async function PUT(
 
     // Start transaction - Delete existing child records first (Upsert Fix)
     const { error: deleteDayPlansError } = await supabase
-      .from('day_wise_plan')
+      .from('quote_days')
       .delete()
       .eq('quote_id', params.id);
 
@@ -150,19 +147,18 @@ export async function PUT(
     }
 
     // Insert new day plans if provided
-    if (day_wise_plan && day_wise_plan.length > 0) {
-      const dayPlansToInsert = day_wise_plan.map((plan: any) => ({
+    if (quote_days && quote_days.length > 0) {
+      const dayPlansToInsert = quote_days.map((plan: any) => ({
         quote_id: params.id,
         day_number: plan.day_number,
-        location: plan.location || '',
-        activities: plan.activities || '',
-        accommodation: plan.accommodation || '',
-        meals: plan.meals || '',
-        transportation: plan.transportation || ''
+        day_date: plan.day_date,
+        region: plan.region,
+        activities: plan.activities || null,
+        notes: plan.notes || null
       }));
 
       const { error: insertDayPlansError } = await supabase
-        .from('day_wise_plan')
+        .from('quote_days')
         .insert(dayPlansToInsert);
 
       if (insertDayPlansError) {
@@ -178,11 +174,11 @@ export async function PUT(
     if (quote_options && quote_options.length > 0) {
       const optionsToInsert = quote_options.map((option: any) => ({
         quote_id: params.id,
-        option_type: option.option_type,
-        name: option.name || '',
-        description: option.description || '',
-        cost_per_person_idr: option.cost_per_person_idr || 0,
-        is_selected: option.is_selected || false
+        option_number: option.option_number,
+        hotel_room_ids: option.hotel_room_ids || [],
+        room_cost_idr: option.room_cost_idr || 0,
+        land_cost_idr: option.land_cost_idr || 0,
+        total_cost_idr: option.total_cost_idr || 0
       }));
 
       const { error: insertOptionsError } = await supabase
@@ -198,20 +194,10 @@ export async function PUT(
       }
     }
 
-    // Call the pricing engine functions
+    // Update the currency display
     try {
-      // First, calculate the quote cost
-      const { error: calculateError } = await supabase
-        .rpc('calculate_quote_cost', { quote_id_param: params.id });
-
-      if (calculateError) {
-        console.error('Error calculating quote cost:', calculateError);
-        // Don't fail the request, just log the error
-      }
-
-      // Then, update the currency display
       const { error: currencyError } = await supabase
-        .rpc('update_quote_currency', { quote_id_param: params.id });
+        .rpc('update_quote_currency', { p_quote_id: params.id });
 
       if (currencyError) {
         console.error('Error updating quote currency:', currencyError);
@@ -228,7 +214,7 @@ export async function PUT(
       .select(`
         *,
         clients (*),
-        day_wise_plan (*),
+        quote_days (*),
         quote_options (*)
       `)
       .eq('id', params.id)
@@ -244,30 +230,27 @@ export async function PUT(
     // Transform the data to match our interface
     const transformedQuote = {
       id: updatedQuote.id,
-      quote_number: updatedQuote.quote_number,
+      quote_ref: updatedQuote.quote_ref,
       agent_id: updatedQuote.agent_id,
       clerk_id: updatedQuote.clerk_id,
       client_id: updatedQuote.client_id,
       client_name: updatedQuote.clients?.name || '',
       client_email: updatedQuote.clients?.email || '',
       status: updatedQuote.status,
-      check_in_date: updatedQuote.check_in_date,
-      check_out_date: updatedQuote.check_out_date,
-      adults: updatedQuote.adults,
-      children: updatedQuote.children,
-      total_cost_idr: updatedQuote.total_cost_idr || 0,
-      agent_margin_percentage: updatedQuote.agent_margin_percentage || 0,
-      final_price_idr: updatedQuote.final_price_idr || 0,
-      currency_display: updatedQuote.currency_display || 'IDR',
-      exchange_rate: updatedQuote.exchange_rate || 1,
-      price_locked_at: updatedQuote.price_locked_at,
+      travel_start: updatedQuote.travel_start,
+      travel_end: updatedQuote.travel_end,
+      pax: updatedQuote.pax,
+      base_cost_idr: updatedQuote.base_cost_idr || 0,
+      markup_idr: updatedQuote.markup_idr || 0,
+      final_total_idr: updatedQuote.final_total_idr || 0,
+      display_currency: updatedQuote.display_currency || 'IDR',
+      exchange_rate_used: updatedQuote.exchange_rate_used || 1,
+      display_final_total: updatedQuote.display_final_total || 0,
       expires_at: updatedQuote.expires_at,
-      expired: updatedQuote.expired || false,
       pdf_url: updatedQuote.pdf_url || null,
-      notes: updatedQuote.notes,
       created_at: updatedQuote.created_at,
       updated_at: updatedQuote.updated_at,
-      day_wise_plan: updatedQuote.day_wise_plan || [],
+      quote_days: updatedQuote.quote_days || [],
       quote_options: updatedQuote.quote_options || []
     };
 

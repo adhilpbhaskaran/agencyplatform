@@ -2,7 +2,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Zap, Clock, DollarSign, Users, BarChart3, Shield, Smartphone, Globe, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
-import Navigation from '@/components/navigation'
+
 import Footer from '@/components/footer'
 
 export default function FeaturesPage() {
@@ -59,7 +59,7 @@ export default function FeaturesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32 overflow-hidden">

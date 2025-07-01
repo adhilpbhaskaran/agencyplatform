@@ -1,12 +1,17 @@
-'use client'
+'use client';
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Circle, ArrowRight, Sparkles, Users, MessageSquare, CreditCard, Settings, BookOpen, Play } from 'lucide-react'
+import { CheckCircle, Circle, ArrowRight, Sparkles, Users, MessageSquare, CreditCard, Settings, BookOpen, Play, Plus } from 'lucide-react'
 import Link from 'next/link'
+import { CreateQuoteModal } from '@/components/dashboard/create-quote-modal'
+
+interface OnboardingFlowProps {
+  userName: string
+}
 
 interface OnboardingStep {
   id: string
@@ -21,7 +26,8 @@ interface OnboardingStep {
   }
 }
 
-export default function OnboardingFlow() {
+export default function OnboardingFlow({ userName }: OnboardingFlowProps) {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [steps, setSteps] = useState<OnboardingStep[]>([
     {
       id: 'profile',
@@ -42,7 +48,7 @@ export default function OnboardingFlow() {
       completed: false,
       action: {
         label: 'Create Quote',
-        href: '/dashboard/quotes/new'
+        onClick: () => setIsCreateModalOpen(true)
       }
     },
     {
@@ -128,11 +134,12 @@ export default function OnboardingFlow() {
             <p className="text-green-700 dark:text-green-300 mb-4">
               You've completed the onboarding process. You're now ready to start creating amazing Bali experiences for your clients.
             </p>
-            <Button className="bg-green-600 hover:bg-green-700">
-              <Link href="/dashboard/quotes/new" className="flex items-center gap-2">
-                Start Creating Quotes
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+            <Button 
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Start Creating Quotes
             </Button>
           </div>
         </CardContent>
@@ -148,7 +155,7 @@ export default function OnboardingFlow() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                Welcome to Bali Malayali! 🌴
+                Welcome {userName}! 🌴
               </CardTitle>
               <p className="text-muted-foreground mt-2">
                 Let's get you set up in just a few minutes. Complete these steps to unlock the full potential of our platform.
@@ -292,6 +299,12 @@ export default function OnboardingFlow() {
           </div>
         </div>
       )}
+      
+      {/* Create Quote Modal */}
+      <CreateQuoteModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
     </div>
   )
 }

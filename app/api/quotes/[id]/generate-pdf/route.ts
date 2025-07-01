@@ -8,22 +8,7 @@ import QuotePDFTemplate from '@/components/pdf/quote-template';
 import { Database } from '@/types/database';
 import { Quote } from '@/hooks/use-quotes';
 
-interface DayPlan {
-  day_number: number;
-  location: string;
-  activities: string;
-  accommodation: string;
-  meals: string;
-  transportation: string;
-}
 
-interface QuoteOption {
-  option_type: 'hotel' | 'activity' | 'transport';
-  name: string;
-  description: string;
-  cost_per_person_idr: number;
-  is_selected: boolean;
-}
 
 
 
@@ -45,10 +30,10 @@ export async function POST(
       .from('quotes')
       .select(`
         *,
-        day_wise_plan (*),
+        quote_days (*),
         quote_options (*),
         clients (
-          full_name,
+          name,
           email,
           phone
         )
@@ -82,14 +67,14 @@ export async function POST(
     const templateData = {
       quote: quote as Quote,
       agent: {
-        name: agent.full_name,
+        name: agent.name,
         email: agent.email,
         phone: agent.phone,
         company_name: agent.company_name,
         logo_url: agent.logo_url
       },
       client: {
-        name: quote.clients?.full_name || '',
+        name: quote.clients?.name || '',
         email: quote.clients?.email || '',
         phone: quote.clients?.phone || undefined
       },

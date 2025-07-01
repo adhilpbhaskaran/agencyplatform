@@ -82,7 +82,7 @@ export async function POST(
     // Get quote details
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
-      .select('*')
+      .select('*, clients(name)')
       .eq('id', quoteId)
       .single();
     
@@ -94,14 +94,14 @@ export async function POST(
     }
     
     // Check if quote is in valid state for payment
-    if (quote.status === 'paid' || quote.status === 'confirmed') {
+    if (quote.status === 'approved') {
       return NextResponse.json(
         { error: 'Quote has already been paid' },
         { status: 400 }
       );
     }
     
-    if (quote.status === 'cancelled' || quote.status === 'expired') {
+    if (quote.status === 'expired' || quote.status === 'void') {
       return NextResponse.json(
         { error: 'Quote is no longer valid for payment' },
         { status: 400 }
@@ -125,7 +125,7 @@ export async function POST(
     
     // Create payment intent with payment gateway
     const paymentIntent = await MockPaymentGateway.createPaymentIntent(
-      quote.final_price_idr || 0,
+      quote.final_total_idr || 0,
       'IDR'
     );
     
@@ -134,10 +134,13 @@ export async function POST(
       .from('payments')
       .insert({
         quote_id: quoteId,
-        amount_idr: quote.final_price_idr || 0,
+        agent_id: quote.agent_id,
+        amount_idr: quote.final_total_idr || 0,
+        amount_paid: quote.final_total_idr || 0,
+        currency_paid: 'IDR',
         payment_method: 'credit_card',
         status: 'pending',
-        transaction_id: paymentIntent.payment_intent_id,
+        gateway_transaction_id: paymentIntent.payment_intent_id,
         is_manual: false,
         proof_url: null,
         verified_by: null,
@@ -165,9 +168,9 @@ export async function POST(
       payment_id: payment.id,
       quote: {
         id: quote.id,
-        quote_number: quote.quote_number,
+        quote_ref: quote.quote_ref,
         client_name: quote.clients?.name,
-        amount: quote.final_price_idr
+        amount: quote.final_total_idr
       }
     });
     
@@ -196,11 +199,11 @@ export async function PUT(
       );
     }
     
-    // Find payment by transaction_id
+    // Find payment by gateway_transaction_id
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .select('*')
-      .eq('transaction_id', payment_intent_id)
+      .eq('gateway_transaction_id', payment_intent_id)
       .single();
     
     if (paymentError || !payment) {

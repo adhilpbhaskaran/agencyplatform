@@ -5,12 +5,10 @@ import { ArrowRight, Star, Users, Globe, TrendingUp, CheckCircle, Zap, Shield, C
 import Link from 'next/link'
 import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs'
 import Footer from '@/components/footer'
-import Navigation from '@/components/navigation'
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
 
       {/* Hero Section */}
       <section className="relative py-20 sm:py-32 overflow-hidden">

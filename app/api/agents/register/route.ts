@@ -15,9 +15,8 @@ export async function POST(req: Request) {
     const { fullName, phone, agentType, companyName, socialHandle, roleInCompany } = body;
 
     const supabase = await createSupabaseServerClient();
-    const clerk = await clerkClient();
-    const user = await clerk.users.getUser(userId);
-    const email = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const user = await (await clerkClient()).users.getUser(userId);
+    const email = user.emailAddresses.find((e: any) => e.id === user.primaryEmailAddressId)?.emailAddress;
     
     if (!email) {
         throw new Error("User's primary email address could not be found.");

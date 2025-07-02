@@ -2,76 +2,30 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/about(.*)',
-  '/about-bali(.*)',
-  '/about-us(.*)',
-  '/blog(.*)',
-  '/careers(.*)',
-  '/community-forum(.*)',
-  '/contact(.*)',
-  '/cookie-policy(.*)',
-  '/features(.*)',
-  '/gdpr(.*)',
-  '/help-center(.*)',
-  '/integrations(.*)',
-  '/knowledge-base(.*)',
-  '/partner-with-us(.*)',
-  '/platform(.*)',
-  '/press(.*)',
-  '/pricing(.*)',
-  '/privacy(.*)',
-  '/privacy-policy(.*)',
-  '/security(.*)',
-  '/support(.*)',
-  '/team(.*)',
-  '/terms(.*)',
-  '/terms-of-service(.*)',
-  '/why-us(.*)',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/registration(.*)'
-]);
-
-// Define routes that require agent authentication
-const isProtectedAgentRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/onboarding(.*)',
-  '/quotes(.*)'
-]);
-
-// Define routes that require admin authentication
-const isProtectedAdminRoute = createRouteMatcher([
-  '/admin(.*)'
-]);
+const isAdminRoute = createRouteMatcher(['/admin(.*)']);
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/registration(.*)']);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims, redirectToSignIn } = await auth();
-  
-  // Allow public routes
-  if (isPublicRoute(req)) {
-    return NextResponse.next();
+  const { userId, sessionClaims } = await auth();
+
+  // If the user is trying to access an admin route
+  if (isAdminRoute(req)) {
+    // If they are not logged in, or their role is not 'super_admin', redirect them away.
+    if (!userId || (sessionClaims?.publicMetadata as { role?: string })?.role !== 'super_admin') {
+      const homeUrl = new URL('/', req.url);
+      return NextResponse.redirect(homeUrl);
+    }
   }
   
-  // Check if user is authenticated for protected routes
-  if (isProtectedAgentRoute(req) || isProtectedAdminRoute(req)) {
+  // If the user is trying to access a standard protected route
+  if (isProtectedRoute(req)) {
+    // Protect the route, which will redirect to sign-in if not logged in.
     if (!userId) {
-      return redirectToSignIn();
+      return NextResponse.redirect(new URL('/sign-in', req.url));
     }
   }
-  
-  // Check admin role for admin routes
-  if (isProtectedAdminRoute(req)) {
-    const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role;
-    
-    if (userRole !== 'admin') {
-      // Redirect non-admin users to dashboard
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-  }
-  
+
+  // Allow all other requests to pass.
   return NextResponse.next();
 });
 
